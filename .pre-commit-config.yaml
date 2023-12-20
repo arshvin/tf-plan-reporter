@@ -1,0 +1,23 @@
+repos:
+- repo: https://github.com/golangci/golangci-lint
+  rev: v1.55.2
+  hooks:
+    - id: golangci-lint-full
+
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.1.0
+  hooks:
+  - id: check-yaml
+  - id: trailing-whitespace
+    exclude_types: [binary]
+  - id: check-json
+  - id: check-toml
+  - id: check-merge-conflict
+  - id: end-of-file-fixer
+    exclude_types: [binary]
+  - id: detect-private-key
+  - id: check-case-conflict
+  - id: mixed-line-ending
+    exclude_types: [binary]
+    args:
+    - --fix=lf
