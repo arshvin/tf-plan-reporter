@@ -13,6 +13,7 @@ import (
 const (
 	config_filename_flag string = "config-file"
 	print_config_flag    string = "print"
+	report_file_name string =  "report-file"
 )
 
 var (
@@ -25,8 +26,9 @@ func init() {
 
 func main() {
 
-	flag.String(config_filename_flag, "", "Config files name of the App")
+	flag.String(config_filename_flag, "", "Config file name of the App")
 	flag.Bool(print_config_flag, false, "Print the example of the config file")
+	flag.String(report_file_name, "", "Output report file name")
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
@@ -36,6 +38,7 @@ func main() {
 		config_filename := viper.GetString(config_filename_flag)
 		appConfig := app.ProcessFileConfig(config_filename)
 		analysis.RunSearch(appConfig)
+		analysis.PrintReport(viper.GetString((report_file_name)))
 	}
 
 	if viper.IsSet(print_config_flag) {
