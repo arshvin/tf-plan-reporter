@@ -1,0 +1,3 @@
+terraform_binary_file: ./test-plan-reader
+terraform_plan_file_basename: az-action-groups.json
+terraform_plan_search_folder: .
