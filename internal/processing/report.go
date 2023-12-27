@@ -2,6 +2,7 @@ package processing
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/alexeyco/simpletable"
 )
@@ -30,17 +31,20 @@ func (cj *consolidatedJson) totalItems() int {
 func formatMainContent(items []*resourceData) *simpletable.Table {
 	headers := []string{"Type", "Index", "Name"}
 
+	log.Debug("Instantiating of report table")
 	table := simpletable.New()
 	table.Header = &simpletable.Header{
 		Cells: []*simpletable.Cell{},
 	}
 
+	log.Debug("Filling of report table headers")
 	for _, header := range headers {
 		table.Header.Cells = append(
 			table.Header.Cells, &simpletable.Cell{Align: simpletable.AlignCenter, Text: header},
 		)
 	}
 
+	log.Debug("Filling of report table rows")
 	for _, item := range items {
 		row := []*simpletable.Cell{
 			{Align: simpletable.AlignLeft, Text: item.resourceType},

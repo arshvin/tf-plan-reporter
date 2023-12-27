@@ -2,17 +2,13 @@ module tf-plan-reporter
 
 go 1.21
 
-require github.com/spf13/viper v1.16.0
-
-require github.com/spf13/pflag v1.0.5
-
-require github.com/hashicorp/terraform-json v0.17.1
-
-require github.com/alexeyco/simpletable v1.0.0
-
 require (
+	github.com/alexeyco/simpletable v1.0.0
+	github.com/hashicorp/terraform-json v0.17.1
 	github.com/mitchellh/cli v1.1.2
-	github.com/spf13/cobra v1.8.0
+	github.com/sirupsen/logrus v1.9.3
+	github.com/spf13/pflag v1.0.5
+	github.com/spf13/viper v1.16.0
 )
 
 require (
@@ -31,7 +27,6 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/imdario/mergo v0.3.11 // indirect
-	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect

@@ -5,13 +5,25 @@ import (
 	"flag"
 	"fmt"
 	"io/fs"
-	"log"
 	"os"
 	"path"
+
+	log "github.com/sirupsen/logrus"
 
 	tfJson "github.com/hashicorp/terraform-json"
 	"github.com/mitchellh/cli"
 )
+
+func init() {
+	log.SetLevel(log.DebugLevel)
+	log.SetFormatter(&log.TextFormatter{
+		DisableLevelTruncation: true,
+		PadLevelText:           true,
+		DisableTimestamp:       false,
+		FullTimestamp:          true,
+		ForceColors:            true,
+	})
+}
 
 type showCmd struct {
 	HelpText     string
@@ -24,18 +36,18 @@ func (c *showCmd) Help() string {
 
 func (c *showCmd) Run(args []string) int {
 
-	flagSet:= flag.NewFlagSet(args[0],flag.ExitOnError)
+	flagSet := flag.NewFlagSet(args[0], flag.ExitOnError)
 	flagSet.Bool("json", true, "Outputs the plan in JSON format")
 	flagSet.Bool("no-color", true, "Removes all color related pseudo symbols from output")
 
-	if err:=flagSet.Parse(args); err != nil{
-		logger.Fatalf("During parsing CLI args the error has happened: %s", err)
+	if err := flagSet.Parse(args); err != nil {
+		log.Fatalf("During parsing CLI args the error has happened: %s", err)
 	}
 
 	jsonPlanFileName := flagSet.Arg(0) //it should be json-file-with-plan
 	inputFile, err := os.Open(jsonPlanFileName)
 	if err != nil {
-		logger.Fatalf("During opening file '%s' the error has happened: %s", jsonPlanFileName, err)
+		log.Fatalf("During opening file '%s' the error has happened: %s", jsonPlanFileName, err)
 	}
 	defer inputFile.Close()
 
@@ -50,23 +62,23 @@ func (c *showCmd) Run(args []string) int {
 
 	fileInfo, err := fs.Stat(dirFS, path.Base(planFilePath))
 	if err != nil {
-		logger.Fatalf("During gathering file info '%s' the error has happened: %s", planFilePath, err)
+		log.Fatalf("During gathering file info '%s' the error has happened: %s", planFilePath, err)
 	}
 
 	inputBuffer := make([]byte, fileInfo.Size())
 	_, err = inputFile.Read(inputBuffer)
 	if err != nil {
-		logger.Fatalf("During reading file '%s' the error has happened: %s", planFilePath, err)
+		log.Fatalf("During reading file '%s' the error has happened: %s", planFilePath, err)
 	}
 
 	var fileContent tfJson.Plan
 	if err = json.Unmarshal(inputBuffer, &fileContent); err != nil {
-		logger.Fatalf("During decoding of file content '%s' the error has happened: %s", planFilePath, err)
+		log.Fatalf("During decoding of file content '%s' the error has happened: %s", planFilePath, err)
 	}
 
-	outputBuffer, err :=json.MarshalIndent(fileContent,"","\t")
-	if err != nil{
-		logger.Fatalf("During preparing JSON to output the error has happened: %s", err)
+	outputBuffer, err := json.MarshalIndent(fileContent, "", "\t")
+	if err != nil {
+		log.Fatalf("During preparing JSON to output the error has happened: %s", err)
 	}
 
 	fmt.Println(string(outputBuffer))
@@ -77,10 +89,6 @@ func (c *showCmd) Run(args []string) int {
 func (c *showCmd) Synopsis() string {
 	return c.SynopsisText
 }
-
-var (
-	logger = log.Default()
-)
 
 func Execute() {
 

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -15,17 +14,24 @@ import (
 	"strings"
 	"text/template"
 
+	log "github.com/sirupsen/logrus"
+
 	app "tf-plan-reporter/internal/config"
 
 	tfJson "github.com/hashicorp/terraform-json"
 )
 
 var (
-	logger                        = log.Default()
 	reportTable *consolidatedJson = new(consolidatedJson)
 
 	//go:embed templates
 	content embed.FS
+	markers = map[string]string{
+		"deleted":   ":red_circle:",
+		"created":   ":green_circle:",
+		"updated":   ":orange_circle:",
+		"unchanged": ":gray_circle:",
+	}
 )
 
 type processingRequest struct {
@@ -33,24 +39,33 @@ type processingRequest struct {
 	planPath    string
 	parsedData  chan<- tfJson.Plan
 	pool        chan int
-	done        bool
 }
 
 func findAllTFPlanFiles(rootDir string, fileBasename string) []string {
 	var result []string
+	if !path.IsAbs(rootDir) {
+		cwd, err := os.Getwd()
+		if err != nil {
+			log.Fatal("Could not get current working dir")
+		}
+		rootDir = path.Join(cwd, rootDir)
+	}
+
 	if err := filepath.WalkDir(rootDir, func(currentPath string, d fs.DirEntry, err error) error {
 
 		if d.Type().IsRegular() {
 			pathElements := strings.Split(currentPath, string(os.PathSeparator))
 
 			if pathElements[len(pathElements)-1] == fileBasename {
+				log.Debugf("Found TF plan file: %s", currentPath)
+
 				result = append(result, currentPath)
 			}
 		}
 
 		return nil
 	}); err != nil {
-		logger.Panicf("During walking directory tree the error happened: %s", err)
+		log.Panicf("During directory tree walking the error happened: %s", err)
 	}
 
 	return result
@@ -64,7 +79,10 @@ func RunSearch(config app.ConfigFile) {
 	tfPlanFilesPathList := findAllTFPlanFiles(config.SearchFolder, config.PlanFileBasename)
 
 	foundItems := len(tfPlanFilesPathList)
-	logger.Printf("Found following amount of terraform generated plan files with name '%s': %d", config.PlanFileBasename, foundItems)
+	log.WithFields(log.Fields{
+		"plan_basename": config.PlanFileBasename,
+		"total_amount":  foundItems,
+	}).Debug("Found terraform generated plan files")
 
 	if foundItems > 0 {
 
@@ -80,63 +98,67 @@ func RunSearch(config app.ConfigFile) {
 		//Save current working dir for return it back
 		cwd, err := os.Getwd()
 		if err != nil {
-			logger.Fatal("Unable to get current working dir")
+			log.Fatal("Could not get current working dir")
 		}
 
-		for index, absTFPlanFilePath := range tfPlanFilesPathList {
+		for _, absTFPlanFilePath := range tfPlanFilesPathList {
 			pr := &processingRequest{
 				commandName: absCmdBinaryPath,
 				planPath:    absTFPlanFilePath,
 				parsedData:  dataPipe,
 				pool:        pool,
-				done:        false,
-			}
-
-			if index == foundItems-1 {
-				pr.done = true
 			}
 
 			go tfPlanReader(pr)
 		}
 
 		//Parsing of read data
-		logger.Printf("Waiting the data for processing from read TF plans")
-		for tfPlan := range dataPipe {
-			resourceChanges := tfPlan.ResourceChanges
+		log.Debug("Waiting of data from read TF plan files for processing")
+		for item := 0; item < foundItems; item++ {
+			tfPlan := <-dataPipe
 
-			for _, resource := range resourceChanges {
+			for _, resource := range tfPlan.ResourceChanges {
 				resourceItem := &resourceData{
 					resourceType:  resource.Type,
 					resourceName:  resource.Name,
 					resourceIndex: resource.Index,
 				}
 
-				logger.Printf("Created new resource item of report table: %s", resourceItem)
+				tableRecordContext := log.WithFields(log.Fields{
+					"resource_type":  resourceItem.resourceType,
+					"resource_name":  resourceItem.resourceName,
+					"resource_index": resourceItem.resourceIndex,
+				})
+				tableRecordContext.Debug("Created new resource item of report table")
 
 				switch {
 				case slices.Contains(resource.Change.Actions, tfJson.ActionCreate):
 					reportTable.created = append(reportTable.created, resourceItem)
 
-					logger.Printf("It's going to be put to 'Created' list ")
+					tableRecordContext.Debug("The item has been put to 'Created' list")
+
 				case slices.Contains(resource.Change.Actions, tfJson.ActionDelete):
 					reportTable.deleted = append(reportTable.deleted, resourceItem)
 
-					logger.Printf("It's going to be put to 'Deleted' list ")
+					tableRecordContext.Debug("The item has been put to 'Deleted' list")
+
 				case slices.Contains(resource.Change.Actions, tfJson.ActionUpdate):
 					reportTable.updated = append(reportTable.updated, resourceItem)
 
-					logger.Printf("It's going to be put to 'Updated' list ")
+					tableRecordContext.Debug("The item has been put to 'Updated' list")
+
 				case slices.Contains(resource.Change.Actions, tfJson.ActionNoop):
 					reportTable.unchanged = append(reportTable.unchanged, resourceItem)
 
-					logger.Printf("It's going to be put to 'Unchanged' list ")
+					tableRecordContext.Debug("The item has been put to 'Unchanged' list")
 				}
 			}
+
 		}
 
 		//Return saved earlier current working dir
 		if err = os.Chdir(cwd); err != nil {
-			logger.Fatal("Unable to return back original working directory")
+			log.Fatal("Could not return back original working directory")
 		}
 	}
 }
@@ -148,17 +170,19 @@ func PrintReport(filename string) {
 	if len(filename) > 0 {
 		var err error
 		if output, err = os.Create(filename); err != nil {
-			logger.Fatal(err)
+			log.Fatal(err)
 		}
 
-		logger.Printf("The empty report files has been created: %s", filename)
+		log.WithField("file_name", filename).Debug("The empty report file has been created")
 
 		defer (output.(io.Closer)).Close()
 	} else {
 		output = os.Stdout
+
+		log.Debug("The report is going to be printed to Stdout")
 	}
 
-	logger.Printf("Report table consists of amount of elements: %d", reportTable.totalItems())
+	log.WithField("total_amount", reportTable.totalItems()).Debug("Report table contains elements")
 
 	if !reportTable.isEmpty() {
 		tmpl := template.Must(template.New("default.tmpl").ParseFS(content, "templates/default.tmpl"))
@@ -168,35 +192,34 @@ func PrintReport(filename string) {
 			MainContent   string
 		}
 
-		processQueue := [][]*resourceData{
-			reportTable.deleted,   // :red_circle:
-			reportTable.created,   // :green_circle:
-			reportTable.updated,   // :orange_circle:
-			reportTable.unchanged, // :gray_circle:
+		processQueue := map[string][]*resourceData{
+			"deleted":   reportTable.deleted,
+			"created":   reportTable.created,
+			"updated":   reportTable.updated,
+			"unchanged": reportTable.unchanged,
 		}
 
-		for index, item := range processQueue {
-			logger.Printf("Current index and item of ProcessQueue are: %d -> %v", index, item)
+		for key, value := range processQueue {
 
-			if len(item) > 0 {
+			tableContext := log.WithFields(log.Fields{
+				"resource_type": key,
+				"total_amount":  len(value),
+			})
+			tableContext.Debug("Statistics")
+
+			if len(value) > 0 {
+
+				tableContext.Debug("Preparing of resource table")
+
 				tmplData := &reportData{
-					ItemCount:   len(item),
-					MainContent: formatMainContent(item).String(),
+					ItemCount:     len(value),
+					MainContent:   formatMainContent(value).String(),
+					WarningMarker: markers[key],
 				}
 
-				switch {
-				case index == 0:
-					tmplData.WarningMarker = ":red_circle:"
-				case index == 1:
-					tmplData.WarningMarker = ":green_circle:"
-				case index == 2:
-					tmplData.WarningMarker = ":orange_circle:"
-				case index == 3:
-					tmplData.WarningMarker = ":gray_circle:"
-				}
-
+				tableContext.Debug("Output of resource table")
 				if err := tmpl.Execute(output, tmplData); err != nil {
-					logger.Fatal(err)
+					tableContext.Fatal(err)
 				}
 			}
 		}
@@ -206,25 +229,28 @@ func PrintReport(filename string) {
 }
 
 func tfPlanReader(pr *processingRequest) {
-	logger.Printf("Process preparing for file: %s", pr.planPath)
+	planFileContext := log.WithField("plan_file_name", pr.planPath)
+	planFileContext.Printf("Preparation for parsing")
 
-	if pr.done {
-		logger.Printf("Closing data channel after processing has finished for file: %s", pr.planPath)
-		defer close(pr.parsedData)
-	}
-
-	logger.Printf("Waiting of green light in process pool for file: %s", pr.planPath)
+	planFileContext.Debug("Waiting of green light in process pool")
 	pr.pool <- 1
-	logger.Printf("Green light has been acquired for file: %s", pr.planPath)
+	planFileContext.Debug("Green light has been acquired")
 
 	if err := os.Chdir(path.Dir(pr.planPath)); err != nil {
-		logger.Panicf("During changing current working directory to '%s', the error happened: %s", path.Dir(pr.planPath), err)
+		planFileContext.Panicf("Could not change current working dir: %s", err)
 	}
 
 	cmdResolvedPath, err := exec.LookPath(pr.commandName)
 	if err != nil {
-		log.Fatalf("It seems like the command %s can't be found", pr.commandName)
+		planFileContext.Fatalf("Could not find the command file: %s", pr.commandName)
 	}
+
+	cmdContext := planFileContext.WithFields(log.Fields{
+		"cwd":            path.Dir(pr.planPath),
+		"command":        cmdResolvedPath,
+		"plan_file_name": path.Base(pr.planPath),
+	})
+	cmdContext.Debug("Launching of command")
 
 	cmd := exec.Command(cmdResolvedPath, "show", "-json", "-no-color", path.Base(pr.planPath))
 	var outputPlan strings.Builder
@@ -232,19 +258,18 @@ func tfPlanReader(pr *processingRequest) {
 
 	err = cmd.Run()
 	if err != nil {
-		cwd, _ := os.Getwd()
-		log.Fatalf("Error happened during execution of command '%s' with CWD: %s: %s", cmd.String(), cwd, err)
+		cmdContext.Fatalf("During execution the error happened: %s", err)
 	}
 
 	var tfJsonPlan tfJson.Plan
 	err = tfJsonPlan.UnmarshalJSON([]byte(outputPlan.String()))
 	if err != nil {
-		log.Fatalf("During unmarshalling TF json output the error happened: %s", err)
+		planFileContext.Fatalf("Could not unmarshal: %s", err)
 	}
 
 	pr.parsedData <- tfJsonPlan
 
-	logger.Printf("Processing was finished for file: %s", pr.planPath)
+	planFileContext.Print("Parsing finished")
 	//Return back capacity to the pool
 	<-pr.pool
 }

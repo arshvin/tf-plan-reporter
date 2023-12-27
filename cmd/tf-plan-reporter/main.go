@@ -2,9 +2,10 @@ package main
 
 import (
 	"flag"
-	"log"
 	app "tf-plan-reporter/internal/config"
 	analysis "tf-plan-reporter/internal/processing"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -16,12 +17,15 @@ const (
 	report_file_name string =  "report-file"
 )
 
-var (
-	logger = log.Default()
-)
-
 func init() {
-	logger.SetPrefix("INFO: ")
+	log.SetLevel(log.DebugLevel)
+	log.SetFormatter(&log.TextFormatter{
+		DisableLevelTruncation: true,
+		PadLevelText: true,
+		DisableTimestamp: false,
+		FullTimestamp: true,
+		ForceColors: true,
+	})
 }
 
 func main() {
@@ -43,6 +47,6 @@ func main() {
 
 	if viper.IsSet(print_config_flag) {
 		print_config := viper.GetString(print_config_flag)
-		logger.Printf("Output to screen the example of config: %s", print_config)
+		log.Printf("Output to screen the example of config: %s", print_config)
 	}
 }
