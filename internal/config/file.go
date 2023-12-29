@@ -1,17 +1,11 @@
-package internal
+package config
 
 import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
-type ConfigFile struct {
-	BinaryFile       string `mapstructure:"terraform_binary_file"`
-	PlanFileBasename string `mapstructure:"terraform_plan_file_basename"`
-	SearchFolder     string `mapstructure:"terraform_plan_search_folder"`
-}
-
-func ProcessFileConfig(name string) ConfigFile {
+func ProcessFileConfig(name string) {
 	viper_runtime := viper.New()
 
 	viper_runtime.SetConfigType("yaml")
@@ -28,5 +22,7 @@ func ProcessFileConfig(name string) ConfigFile {
 
 	log.Debugf("Content of config file/structure: %v", config)
 
-	return config
+	AppConfig.ConfigFile = config
+
+	defineCriticalResources()
 }

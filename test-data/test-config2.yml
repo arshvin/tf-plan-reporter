@@ -1,3 +1,15 @@
 terraform_binary_file: ./test-plan-reader
 terraform_plan_file_basename: plan.json
 terraform_plan_search_folder: .
+
+critical_resources:
+  - all
+
+allowed_removals:  # makes sense only if "all" specified in "critical_resources" section
+  - null_resource
+  - azurerm_role_assignment
+  - azurerm_monitor_diagnostic_setting
+  - azurerm_cosmosdb_sql_container
+  - azurerm_cosmosdb_sql_database
+  - azurerm_cosmosdb_account
+  - azurerm_key_vault

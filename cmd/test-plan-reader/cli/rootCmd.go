@@ -4,26 +4,14 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/fs"
+	"io"
 	"os"
-	"path"
 
 	log "github.com/sirupsen/logrus"
 
 	tfJson "github.com/hashicorp/terraform-json"
 	"github.com/mitchellh/cli"
 )
-
-func init() {
-	log.SetLevel(log.DebugLevel)
-	log.SetFormatter(&log.TextFormatter{
-		DisableLevelTruncation: true,
-		PadLevelText:           true,
-		DisableTimestamp:       false,
-		FullTimestamp:          true,
-		ForceColors:            true,
-	})
-}
 
 type showCmd struct {
 	HelpText     string
@@ -36,54 +24,51 @@ func (c *showCmd) Help() string {
 
 func (c *showCmd) Run(args []string) int {
 
+	var chDir string
+
 	flagSet := flag.NewFlagSet(args[0], flag.ExitOnError)
 	flagSet.Bool("json", true, "Outputs the plan in JSON format")
 	flagSet.Bool("no-color", true, "Removes all color related pseudo symbols from output")
+	flagSet.StringVar(&chDir, "chdir", "", "Switch to a different working directory before executing the given subcommand.")
 
 	if err := flagSet.Parse(args); err != nil {
-		log.Fatalf("During parsing CLI args the error has happened: %s", err)
+		log.Fatalf("During parsing CLI args the error happened: %s", err)
 	}
 
-	jsonPlanFileName := flagSet.Arg(0) //it should be json-file-with-plan
+	jsonPlanFileName := flagSet.Arg(0) //it should be `json-file-with-plan` cli arg
+
+	planContext := log.WithField("plan_file_name", jsonPlanFileName)
+
+	if len(chDir) > 0 {
+		if err := os.Chdir(chDir); err != nil {
+			planContext.Fatalf("During chdir operation the error happened: %s", err)
+		}
+	}
+
 	inputFile, err := os.Open(jsonPlanFileName)
 	if err != nil {
-		log.Fatalf("During opening file '%s' the error has happened: %s", jsonPlanFileName, err)
+		planContext.Fatalf("During file opening the error happened: %s", err)
 	}
 	defer inputFile.Close()
 
-	var planFilePath string
-	if path.IsAbs((jsonPlanFileName)) {
-		planFilePath = jsonPlanFileName
-	} else {
-		cwd, _ := os.Getwd()
-		planFilePath = path.Join(cwd, jsonPlanFileName)
-	}
-	dirFS := os.DirFS(path.Dir(planFilePath))
-
-	fileInfo, err := fs.Stat(dirFS, path.Base(planFilePath))
+	inputBuffer, err := io.ReadAll(inputFile)
 	if err != nil {
-		log.Fatalf("During gathering file info '%s' the error has happened: %s", planFilePath, err)
-	}
-
-	inputBuffer := make([]byte, fileInfo.Size())
-	_, err = inputFile.Read(inputBuffer)
-	if err != nil {
-		log.Fatalf("During reading file '%s' the error has happened: %s", planFilePath, err)
+		planContext.Fatalf("During file reading the error happened: %s", err)
 	}
 
 	var fileContent tfJson.Plan
 	if err = json.Unmarshal(inputBuffer, &fileContent); err != nil {
-		log.Fatalf("During decoding of file content '%s' the error has happened: %s", planFilePath, err)
+		planContext.Fatalf("During content decoding the error happened: %s", err)
 	}
 
-	outputBuffer, err := json.MarshalIndent(fileContent, "", "\t")
+	outputBuffer, err := json.MarshalIndent(fileContent, "", " ")
 	if err != nil {
-		log.Fatalf("During preparing JSON to output the error has happened: %s", err)
+		planContext.Fatalf("During preparing JSON to output the error happened: %s", err)
 	}
 
 	fmt.Println(string(outputBuffer))
 
-	return 0
+	return 0 //Stub, but if we'd have an error the app is failed earlier
 }
 
 func (c *showCmd) Synopsis() string {
@@ -103,6 +88,8 @@ func Execute() {
 Available flags are:
 	-json    				Outputs the plan in JSON format
 	-no-color				Removes all color related pseudo symbols from output
+	-chdir=DIR				Switch to a different working directory before executing the
+							given subcommand
 	json-file-with-plan		Filename with JSON formatted 'terraform plan' result
 `,
 			}, nil
