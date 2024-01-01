@@ -2,7 +2,8 @@ package cli
 
 import (
 	"flag"
-	"log"
+	log "github.com/sirupsen/logrus"
+	"os"
 
 	app "tf-plan-reporter/internal/config"
 	analysis "tf-plan-reporter/internal/processing"
@@ -12,35 +13,58 @@ import (
 )
 
 const (
-	configFilenameFlag      string = "config-file"
-	printConfigFlag         string = "print"
-	reportFileNameFlag      string = "report-file"
-	errorIfCriticalRemovals string = "fail-if"
-)
+	configFileArg = "config-file"
+	printConfigExampleArg = "print-example"
 
+)
 func Execute() {
-	flag.String(configFilenameFlag, "", "Config file name of the App")
-	flag.Bool(printConfigFlag, false, "Print the example of the config file")
-	flag.String(reportFileNameFlag, "", "Output report file name")
-	flag.Bool(errorIfCriticalRemovals, false, "Return error if there are resources deleting in 'critical_resources' or not specified in 'allowed_removals config lists'")
+	var configFileName string
+	var outputFileName string
+	var onlyPrintConfigExample bool
+	var exitWithError bool
+	var debugOutput bool
+	var noColor bool
+
+	flag.StringVar(&configFileName, configFileArg, "", "Config file name of the App")
+	flag.StringVar(&outputFileName, "report-file", "", "Output file name of the report ")
+	flag.BoolVar(&onlyPrintConfigExample, printConfigExampleArg, false, "Print an example of the App config file without analyses run")
+	flag.BoolVar(&exitWithError, "keep-gate", false, "Finish App with non zero exit code if critical resources removals are detected")
+
+	flag.BoolVar(&debugOutput, "verbose", false, "Add debug logging output")
+	flag.BoolVar(&noColor, "no-color", false, "Turn off color output in log messages")
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
 	viper.BindPFlags(pflag.CommandLine)
 
-	if viper.IsSet(configFilenameFlag) {
-		config_filename := viper.GetString(configFilenameFlag)
-		app.ProcessFileConfig(config_filename)
+	if debugOutput {
+		log.SetLevel(log.DebugLevel)
+	}
 
-		app.AppConfig.ReportFileName = viper.GetString(reportFileNameFlag)
-		app.AppConfig.FailIfCriticalRemovals = viper.GetBool(errorIfCriticalRemovals)
+	if noColor {
+		log.SetFormatter(&log.TextFormatter{
+			DisableColors: true,
+		})
+	}
+
+
+	if len(configFileName) > 0 {
+		app.ProcessFileConfig(configFileName)
+
+		app.AppConfig.ReportFileName = outputFileName
+		app.AppConfig.FailIfCriticalRemovals = exitWithError
 
 		analysis.RunSearch()
 		analysis.PrintReport()
+
+		os.Exit(0) //Explicitly
 	}
 
-	if viper.IsSet(printConfigFlag) {
-		print_config := viper.GetString(printConfigFlag)
-		log.Printf("Output to screen the example of config: %s", print_config)
+	if onlyPrintConfigExample {
+		log.Print("Output to screen the example of config: STUB")
+		os.Exit(0) //Explicitly
 	}
+
+	pflag.Usage()
+	log.Fatalf("It must be chosen one of the following flags: %s, %s", configFileArg, printConfigExampleArg)
 }

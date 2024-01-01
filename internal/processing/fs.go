@@ -55,19 +55,26 @@ func tfPlanReader(pr *processingRequest) {
 		planFileContext.Fatalf("Could not find the command file: %s", pr.commandName)
 	}
 
+	planDirName := path.Dir(pr.planPath)
+	auxCmdArgs := fmt.Sprintf("-chdir=%s show -json -no-color %s", planDirName, path.Base(pr.planPath))
+
 	cmdContext := planFileContext.WithFields(log.Fields{
 		"command":        cmdResolvedPath,
+		"args":           auxCmdArgs,
 		"plan_file_name": path.Base(pr.planPath),
 	})
-	cmdContext.Debug("Launching of command")
+	cmdContext.Debug("Command launching")
 
-	planDirName := path.Dir(pr.planPath)
-	cmd := exec.Command(cmdResolvedPath, "show", fmt.Sprintf("-chdir=%s", planDirName), "-json", "-no-color", path.Base(pr.planPath))
+	cmd := exec.Command(cmdResolvedPath, strings.Split(auxCmdArgs, " ")...)
 	var outputPlan strings.Builder
+	var tfErr strings.Builder
+
 	cmd.Stdout = &outputPlan
+	cmd.Stderr = &tfErr
 
 	err = cmd.Run()
 	if err != nil {
+		cmdContext.Debugf("Command stderr output:\n%s", tfErr.String())
 		cmdContext.Fatalf("During execution the error happened: %s", err)
 	}
 

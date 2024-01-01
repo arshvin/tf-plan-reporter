@@ -159,7 +159,7 @@ func PrintReport() {
 			"delete": []string{":red_circle:", "Resources to be deleted"},
 			"create": []string{":green_circle:", "Resources to be created"},
 			"update": []string{":orange_circle:", "Resources to be updated"},
-			"noop":   []string{":gray_circle:", "Resources to be ignored for change"},
+			"noop":   []string{":white_circle:", "Resources to be ignored for change"},
 		}
 
 		for key, value := range processQueue {
@@ -187,6 +187,11 @@ func PrintReport() {
 				}
 			}
 		}
+
+		if cfg.AppConfig.FailIfCriticalRemovals && cfg.AppConfig.CriticalRemovalsFound {
+			log.Fatal("There are critical resources removal in the report")
+		}
+
 	} else {
 		fmt.Fprint(output, "THERE IS NO ANY REPORT DATA")
 	}

@@ -37,7 +37,7 @@ func formatMainContent(items []*resourceData, isDeleteTable bool) *simpletable.T
 	headers := []string{"Type", "Index", "Name"}
 
 	if isDeleteTable {
-		headers = slices.Insert(headers, 0, "Allowable to remove")
+		headers = slices.Insert(headers, 0, "Allowed to remove")
 	}
 
 	log.Debug("Instantiating of report table")

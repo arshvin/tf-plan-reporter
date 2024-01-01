@@ -7,13 +7,12 @@ import (
 )
 
 func init() {
-	log.SetLevel(log.DebugLevel)
+	log.SetLevel(log.InfoLevel)
 	log.SetFormatter(&log.TextFormatter{
 		DisableLevelTruncation: true,
 		PadLevelText:           true,
 		DisableTimestamp:       false,
 		FullTimestamp:          true,
-		ForceColors:            false,
 	})
 }
 
