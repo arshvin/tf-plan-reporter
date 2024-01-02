@@ -11,6 +11,7 @@ runs:
 
     - name: Run the build
       run: |
+        go env -w CGO_ENABLED=0
         go build tf-plan-reporter/cmd/tf-plan-reporter
       shell: bash
 
