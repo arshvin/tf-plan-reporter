@@ -1,0 +1,22 @@
+name: Lint Code Base
+
+on:
+  pull_request:
+    branches:
+    - master
+
+jobs:
+  build:
+    name: Setup & Run Linters
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Install pre-commit
+      run: |
+        pip install pre-commit==2.20.0
+
+    - name: Run common linters
+      run: |
+        pre-commit run -a || { git status; echo "Validation failed"; exit 1; }
