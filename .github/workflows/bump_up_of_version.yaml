@@ -53,7 +53,7 @@ jobs:
           body: |
             The new version [${{ steps.bump-semver.outputs.new_version }}](https://github.com/${{ github.repository }}/releases/tag/${{ steps.bump-semver.outputs.new_version }}) has been released :tada:
 
-      - uses: actions/action-gh-release@v1
+      - uses: softprops/action-gh-release@v1
         if: ${{ steps.release-label.outputs.level == 'major' || steps.release-label.outputs.level == 'minor' || steps.release-label.outputs.level == 'patch' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
