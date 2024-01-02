@@ -1,3 +1,3 @@
 terraform_binary_file: /usr/local/bin/terraform
-terraform_plan_file_basename: plan.bin
+terraform_plan_file_basename: tfplan.bin
 terraform_plan_search_folder: ./
