@@ -1,0 +1,20 @@
+name: Build app
+description: Test, build and pack app artifacts
+
+runs:
+  using: composite
+  steps:
+
+    - uses: actions/setup-go@v4
+      with:
+        go-version: '1.21.5'
+
+    - name: Run the build
+      run: |
+        go build tf-plan-reporter/cmd/tf-plan-reporter
+      shell: bash
+
+    - name: Run the build
+      run: |
+        zip tf-plan-reporter_linux_amd64.zip tf-plan-reporter
+      shell: bash

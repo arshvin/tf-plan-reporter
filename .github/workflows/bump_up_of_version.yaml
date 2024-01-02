@@ -1,0 +1,64 @@
+name: BUMP UP PRODUCT VERSION
+
+on:
+  push:
+    branches:
+    - master
+
+jobs:
+  release_creating:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-ecosystem/action-get-merged-pull-request@v1
+        id: get-merged-pull-request
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions-ecosystem/action-release-label@v1
+        id: release-label
+        if: ${{ steps.get-merged-pull-request.outputs.title != null }}
+        with:
+          labels: ${{ steps.get-merged-pull-request.outputs.labels }}
+
+      - uses: actions-ecosystem/action-get-latest-tag@v1
+        id: get-latest-tag
+        if: ${{ steps.release-label.outputs.level != null }}
+        with:
+          semver_only: true
+
+      - uses: actions-ecosystem/action-bump-semver@v1
+        id: bump-semver
+        if: ${{ steps.release-label.outputs.level != null }}
+        with:
+          current_version: ${{ steps.get-latest-tag.outputs.tag }}
+          level: ${{ steps.release-label.outputs.level }}
+
+      - uses: ./.github/actions/build_app
+        if: ${{ steps.release-label.outputs.level != null }}
+
+      - uses: actions-ecosystem/action-push-tag@v1
+        if: ${{ steps.bump-semver.outputs.new_version != null }}
+        with:
+          tag: ${{ steps.bump-semver.outputs.new_version }}
+          message: "${{ steps.bump-semver.outputs.new_version }}: PR #${{ steps.get-merged-pull-request.outputs.number }} ${{ steps.get-merged-pull-request.outputs.title }}"
+
+      - uses: actions-ecosystem/action-create-comment@v1
+        if: ${{ steps.bump-semver.outputs.new_version != null }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          number: ${{ steps.get-merged-pull-request.outputs.number }}
+          body: |
+            The new version [${{ steps.bump-semver.outputs.new_version }}](https://github.com/${{ github.repository }}/releases/tag/${{ steps.bump-semver.outputs.new_version }}) has been released :tada:
+
+      - uses: actions/action-gh-release@v1
+        if: ${{ steps.release-label.outputs.level == 'major' || steps.release-label.outputs.level == 'minor' || steps.release-label.outputs.level == 'patch' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.bump-semver.outputs.new_version }}
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          files: |
+            tf-plan-reporter_*.zip

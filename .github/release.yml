@@ -1,0 +1,19 @@
+changelog:
+  exclude:
+    labels:
+      - relates to ci/cd
+      - no release
+  categories:
+    - title: Breaking Changes 🛠
+      labels:
+        - major
+    - title: New Features 🎉
+      labels:
+        - minor
+    - title: Bug fixes
+      labels:
+        - patch
+        - bug
+    - title: Other Changes
+      labels:
+        - "*"
