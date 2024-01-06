@@ -20,7 +20,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           sha: ${{ github.event.pull_request.head.sha }}
           filterOutClosed: true
-          filterOutDraft: true
+          filterOutDraft: false
 
       - name: Check if the Pull Request has been labeled
         if: steps.current-pull-request-info.outcome == 'success'
