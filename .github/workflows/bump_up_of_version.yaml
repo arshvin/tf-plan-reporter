@@ -1,4 +1,4 @@
-name: BUMP UP PRODUCT VERSION
+name: Bump up product version
 
 on:
   push:
