@@ -1,7 +1,7 @@
 package main
 
 import (
-	"tf-plan-reporter/cmd/tf-plan-reporter/cli"
+	"github.com/arshvin/tf-plan-reporter/cmd/tf-plan-reporter/cli"
 
 	log "github.com/sirupsen/logrus"
 )

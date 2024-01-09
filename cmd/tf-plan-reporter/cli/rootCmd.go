@@ -2,21 +2,22 @@ package cli
 
 import (
 	"flag"
-	log "github.com/sirupsen/logrus"
 	"os"
 
-	app "tf-plan-reporter/internal/config"
-	analysis "tf-plan-reporter/internal/processing"
+	log "github.com/sirupsen/logrus"
+
+	app "github.com/arshvin/tf-plan-reporter/internal/config"
+	analysis "github.com/arshvin/tf-plan-reporter/internal/processing"
 
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
 const (
-	configFileArg = "config-file"
+	configFileArg         = "config-file"
 	printConfigExampleArg = "print-example"
-
 )
+
 func Execute() {
 	var configFileName string
 	var outputFileName string
@@ -46,7 +47,6 @@ func Execute() {
 			DisableColors: true,
 		})
 	}
-
 
 	if len(configFileName) > 0 {
 		app.ProcessFileConfig(configFileName)
