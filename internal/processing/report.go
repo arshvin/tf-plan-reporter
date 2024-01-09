@@ -7,7 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	cfg "tf-plan-reporter/internal/config"
+	cfg "github.com/arshvin/tf-plan-reporter/internal/config"
 
 	"github.com/alexeyco/simpletable"
 )

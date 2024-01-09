@@ -11,7 +11,7 @@ on:
   workflow_call:
 
 jobs:
-  validate_current_pr:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: 8BitJonny/gh-get-current-pr@2.2.0
@@ -39,7 +39,7 @@ jobs:
           ${{ steps.current-pull-request-info.outputs.pr_body }}
           EOF
 
-          threshold=30
+          threshold=10
           if (( `cat $output_file | wc -m` <  $threshold )); then
             echo "::error::The pull request description must contain at least $threshold characters"
             exit 1

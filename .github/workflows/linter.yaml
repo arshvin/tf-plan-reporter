@@ -6,7 +6,7 @@ on:
     - master
 
 jobs:
-  build:
+  lint:
     name: Setup & Run Linters
     runs-on: ubuntu-latest
     steps:
