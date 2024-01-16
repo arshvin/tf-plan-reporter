@@ -42,9 +42,10 @@ func findAllTFPlanFiles(rootDir string, fileBasename string) []string {
 
 	return result
 }
+
 func tfPlanReader(pr *processingRequest) {
 	planFileContext := log.WithField("plan_file_name", pr.planPath)
-	planFileContext.Printf("Preparation for parsing")
+	planFileContext.Info("Preparation for parsing")
 
 	planFileContext.Debug("Waiting of green light in process pool")
 	pr.pool <- 1
@@ -84,7 +85,7 @@ func tfPlanReader(pr *processingRequest) {
 		planFileContext.Fatalf("Could not unmarshal: %s", err)
 	}
 
-	planFileContext.Debugf("Harvestered records: %v", len(tfJsonPlan.ResourceChanges))
+	planFileContext.Debugf("Harvested records: %v", len(tfJsonPlan.ResourceChanges))
 
 	pr.parsedData <- tfJsonPlan
 

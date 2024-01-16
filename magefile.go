@@ -39,7 +39,7 @@ func BuildTestApp() error {
 	envs := make(map[string]string)
 	envs["CGO_ENABLED"] = "0"
 
-	return sh.RunWith(envs, "go", "build", "-o", planReporterApp, fmt.Sprintf("%s/%s", prefix, planReporterApp))
+	return sh.RunWith(envs, "go", "build", "-o", testPlanReaderApp, fmt.Sprintf("%s/%s", prefix, testPlanReaderApp))
 
 }
 
