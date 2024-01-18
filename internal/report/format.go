@@ -3,8 +3,8 @@ package report
 import (
 	"cmp"
 	"embed"
-	"fmt"
 	"io"
+	"path"
 	"slices"
 	"strings"
 	"text/template"
@@ -20,11 +20,17 @@ var (
 	content embed.FS
 )
 
+const (
+	deleted byte = iota
+	created
+	updated
+	unchanged
+)
+
 type reportData struct {
-	WarningMarker string
-	Caption       string
-	ItemCount     int
-	MainContent   string
+	ItemCount    int
+	TableContent string
+	ActionType   byte
 }
 
 type Report struct {
@@ -35,37 +41,32 @@ type Report struct {
 
 func (r *Report) Prepare(data *exch.ConsolidatedJson) {
 
-	processQueue := map[string][]*exch.ResourceData{
-		"delete": data.Deleted,
-		"create": data.Created,
-		"update": data.Updated,
-		"noop":   data.Unchanged,
-	}
+	queue := []byte{deleted, created, updated, unchanged}
 
-	headers := map[string][]string{
-		"delete": []string{":red_circle:", "Resources to be deleted"},
-		"create": []string{":green_circle:", "Resources to be created"},
-		"update": []string{":orange_circle:", "Resources to be updated"},
-		"noop":   []string{":white_circle:", "Resources to be ignored for change"},
-	}
+	for _, actionType := range queue {
+		var value []*exch.ResourceData
 
-	for key, value := range processQueue {
+		switch actionType {
+		case deleted:
+			value = data.Deleted
+		case created:
+			value = data.Created
+		case updated:
+			value = data.Updated
+		case unchanged:
+			value = data.Unchanged
+		}
 
-		tableContext := log.WithFields(log.Fields{
-			"action_type":        key,
-			"affected_resources": len(value),
-		})
-		tableContext.Debug("Statistics")
+		amount := len(value)
 
-		if len(value) > 0 {
+		if amount > 0 {
 
-			tableContext.Debug("Preparing of resource table")
+			log.Debug("Preparing of main content of template section")
 
 			item := &reportData{
-				ItemCount:     len(value),
-				MainContent:   formatMainContent(value, key == "delete").String(),
-				WarningMarker: headers[key][0],
-				Caption:       headers[key][1],
+				TableContent: formatMainContent(value, actionType == deleted).String(),
+				ItemCount:    amount,
+				ActionType:   actionType,
 			}
 
 			r.data = append(r.data, item)
@@ -81,11 +82,25 @@ func (r *Report) Print() {
 		"upper": strings.ToUpper,
 	}
 
-	tmpl := template.Must(template.New("default.tmpl").Funcs(funcMap).ParseFS(content, "templates/default.tmpl"))
+	parentTemplate := template.Must(template.New(path.Base(r.template)).Funcs(funcMap).ParseFS(content, r.template))
 
 	for _, item := range r.data {
+		var templatePathName string
 
-		if err := tmpl.Execute(r.output, item); err != nil {
+		switch item.ActionType {
+		case deleted:
+			templatePathName = "templates/github_markdown/deleted.tmpl"
+		case created:
+			templatePathName = "templates/github_markdown/created.tmpl"
+		case updated:
+			templatePathName = "templates/github_markdown/updated.tmpl"
+		case unchanged:
+			templatePathName = "templates/github_markdown/unchanged.tmpl"
+		}
+
+		resultTemplate := template.Must(template.Must(parentTemplate.Clone()).ParseFS(content, templatePathName))
+
+		if err := resultTemplate.Execute(r.output, item); err != nil {
 			log.Fatal(err)
 		}
 	}
@@ -93,7 +108,7 @@ func (r *Report) Print() {
 }
 
 func ForGitHub(output io.Writer) *Report {
-	return &Report{output: output, template: "templates/default.tmpl"}
+	return &Report{output: output, template: "templates/github_markdown.tmpl"}
 }
 
 func formatMainContent(items []*exch.ResourceData, isDeleteTable bool) *simpletable.Table {
@@ -126,7 +141,7 @@ func formatMainContent(items []*exch.ResourceData, isDeleteTable bool) *simpleta
 	for _, item := range items {
 		row := []*simpletable.Cell{
 			{Align: simpletable.AlignLeft, Text: item.Type},
-			{Align: simpletable.AlignLeft, Text: fmt.Sprintf("%s", item.Index)},
+			{Align: simpletable.AlignLeft, Text: item.Index},
 			{Align: simpletable.AlignLeft, Text: item.Name},
 		}
 
