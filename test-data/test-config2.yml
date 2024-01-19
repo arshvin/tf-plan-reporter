@@ -1,6 +1,6 @@
 terraform_binary_file: ./test-plan-reader
 terraform_plan_file_basename: plan.json
-terraform_plan_search_folder: ../adm.apac.spoke.prod-terragrunt/
+terraform_plan_search_folder: .
 
 critical_resources:
   - all
