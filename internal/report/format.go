@@ -3,6 +3,7 @@ package report
 import (
 	"cmp"
 	"embed"
+	"fmt"
 	"io"
 	"path"
 	"slices"
@@ -37,11 +38,36 @@ type Report struct {
 	template string
 	output   io.Writer
 	data     []*reportData
+	answers  map[bool]string
+}
+
+func ForGitHub(output io.Writer) *Report {
+	return &Report{
+		output:   output,
+		template: "templates/github_markdown.tmpl",
+		answers: map[bool]string{
+			true:  ":white_check_mark:", // https://emojipedia.org/check-mark-button#technical
+			false: ":x:",                // https://emojipedia.org/cross-mark#technical
+		},
+	}
+}
+
+func ForStdout(output io.Writer) *Report {
+	return &Report{
+		output:   output,
+		template: "templates/stdout.tmpl",
+		answers: map[bool]string{
+			true:  "yes",
+			false: "no",
+		},
+	}
 }
 
 func (r *Report) Prepare(data *exch.ConsolidatedJson) {
 
 	queue := []byte{deleted, created, updated, unchanged}
+
+	var answers map[bool]string
 
 	for _, actionType := range queue {
 		var value []*exch.ResourceData
@@ -63,8 +89,14 @@ func (r *Report) Prepare(data *exch.ConsolidatedJson) {
 
 			log.Debug("Preparing of main content of template section")
 
+			if actionType == deleted {
+				answers = r.answers
+			} else {
+				answers = nil
+			}
+
 			item := &reportData{
-				TableContent: formatMainContent(value, actionType == deleted).String(),
+				TableContent: formatMainContent(value, &answers).String(),
 				ItemCount:    amount,
 				ActionType:   actionType,
 			}
@@ -72,7 +104,6 @@ func (r *Report) Prepare(data *exch.ConsolidatedJson) {
 			r.data = append(r.data, item)
 		}
 	}
-
 }
 
 func (r *Report) Print() {
@@ -89,13 +120,13 @@ func (r *Report) Print() {
 
 		switch item.ActionType {
 		case deleted:
-			templatePathName = "templates/github_markdown/deleted.tmpl"
+			templatePathName = r.getTemplate("deleted.tmpl")
 		case created:
-			templatePathName = "templates/github_markdown/created.tmpl"
+			templatePathName = r.getTemplate("created.tmpl")
 		case updated:
-			templatePathName = "templates/github_markdown/updated.tmpl"
+			templatePathName = r.getTemplate("updated.tmpl")
 		case unchanged:
-			templatePathName = "templates/github_markdown/unchanged.tmpl"
+			templatePathName = r.getTemplate("unchanged.tmpl")
 		}
 
 		resultTemplate := template.Must(template.Must(parentTemplate.Clone()).ParseFS(content, templatePathName))
@@ -107,14 +138,14 @@ func (r *Report) Print() {
 
 }
 
-func ForGitHub(output io.Writer) *Report {
-	return &Report{output: output, template: "templates/github_markdown.tmpl"}
+func (r *Report) getTemplate(name string) string {
+	return fmt.Sprintf("%s/%s", strings.Split(r.template, ".")[0], name)
 }
 
-func formatMainContent(items []*exch.ResourceData, isDeleteTable bool) *simpletable.Table {
+func formatMainContent(items []*exch.ResourceData, deleteTableAnswers *map[bool]string) *simpletable.Table {
 	headers := []string{"Type", "Name", "Index (if any)"}
 
-	if isDeleteTable {
+	if deleteTableAnswers != nil {
 		headers = slices.Insert(headers, 0, "Allowed to remove")
 	}
 
@@ -145,9 +176,9 @@ func formatMainContent(items []*exch.ResourceData, isDeleteTable bool) *simpleta
 			{Align: simpletable.AlignLeft, Text: item.Index},
 		}
 
-		if isDeleteTable {
+		if deleteTableAnswers != nil {
 			row = slices.Insert(row, 0,
-				&simpletable.Cell{Align: simpletable.AlignCenter, Text: isAllowedToRemove(item.Type)})
+				&simpletable.Cell{Align: simpletable.AlignCenter, Text: isAllowedToRemove(item.Type, deleteTableAnswers)})
 		}
 
 		table.Body.Cells = append(table.Body.Cells, row)
@@ -156,18 +187,18 @@ func formatMainContent(items []*exch.ResourceData, isDeleteTable bool) *simpleta
 	return table
 }
 
-func isAllowedToRemove(resourceType string) string {
+func isAllowedToRemove(resourceType string, deleteTableAnswers *map[bool]string) string {
 	if cfg.AppConfig.IsAllCriticalSpecified {
 		if _, ok := cfg.AppConfig.IgnoreList[resourceType]; ok {
-			return ":white_check_mark: "
+			return (*deleteTableAnswers)[true]
 		}
 		cfg.AppConfig.CriticalRemovalsFound = true
-		return ":x:"
+		return (*deleteTableAnswers)[false]
 	} else {
 		if _, ok := cfg.AppConfig.RescueList[resourceType]; ok {
 			cfg.AppConfig.CriticalRemovalsFound = true
-			return ":x:"
+			return (*deleteTableAnswers)[false]
 		}
-		return ":white_check_mark: "
+		return (*deleteTableAnswers)[true]
 	}
 }
