@@ -61,7 +61,7 @@ func Execute() {
 	}
 
 	if onlyPrintConfigExample {
-		log.Print("Output to screen the example of config: STUB")
+		log.Print("Output to screen the example of config: STUB. It will be implemented soon")
 		os.Exit(0) //Explicitly
 	}
 
