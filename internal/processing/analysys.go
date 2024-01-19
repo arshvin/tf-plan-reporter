@@ -77,30 +77,40 @@ func RunSearch() {
 func PrintReport() {
 	filename := cfg.AppConfig.ReportFileName
 	var output io.Writer
-
-	if len(filename) > 0 {
-		var err error
-		if output, err = os.Create(filename); err != nil {
-			log.Fatal(err)
-		}
-
-		log.WithField("file_name", filename).Debug("The empty report file has been created")
-
-		defer (output.(io.Closer)).Close()
-	} else {
-		output = os.Stdout
-
-		log.Debug("The report is going to be printed to Stdout")
-	}
+	var reports []*report.Report
 
 	totalAmount := reportTable.TotalItems()
 	log.WithField("total_amount", totalAmount).Debug("Report table contains elements")
 
 	if totalAmount > 0 {
 
-		t := report.ForGitHub(output)
-		t.Prepare(reportTable)
-		t.Print()
+		if len(filename) > 0 {
+			var err error
+			if output, err = os.Create(filename); err != nil {
+				log.Fatal(err)
+			}
+
+			log.WithField("file_name", filename).Debug("The empty report file has been created")
+
+			defer (output.(io.Closer)).Close()
+
+			reports = []*report.Report{
+				report.ForGitHub(output),
+				report.ForStdout(),
+			}
+
+		} else {
+			reports = []*report.Report{
+				report.ForStdout(),
+			}
+
+			log.Debug("The report is going to be printed to Stdout")
+		}
+
+		for _, r := range reports {
+			r.Prepare(reportTable)
+			r.Print()
+		}
 
 		if cfg.AppConfig.FailIfCriticalRemovals && cfg.AppConfig.CriticalRemovalsFound {
 			log.Fatal("There are critical resources removal in the report")

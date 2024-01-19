@@ -5,6 +5,7 @@ import (
 	"embed"
 	"fmt"
 	"io"
+	"os"
 	"path"
 	"slices"
 	"strings"
@@ -30,15 +31,16 @@ const (
 
 type reportData struct {
 	ItemCount    int
-	TableContent string
+	TableContent *simpletable.Table
 	ActionType   byte
 }
 
 type Report struct {
-	template string
-	output   io.Writer
-	data     []*reportData
-	answers  map[bool]string
+	template   string
+	output     io.Writer
+	data       []*reportData
+	answers    map[bool]string
+	tableStyle *simpletable.Style
 }
 
 func ForGitHub(output io.Writer) *Report {
@@ -49,17 +51,19 @@ func ForGitHub(output io.Writer) *Report {
 			true:  ":white_check_mark:", // https://emojipedia.org/check-mark-button#technical
 			false: ":x:",                // https://emojipedia.org/cross-mark#technical
 		},
+		tableStyle: simpletable.StyleMarkdown,
 	}
 }
 
-func ForStdout(output io.Writer) *Report {
+func ForStdout() *Report {
 	return &Report{
-		output:   output,
+		output:   os.Stdout,
 		template: "templates/stdout.tmpl",
 		answers: map[bool]string{
 			true:  "yes",
 			false: "no",
 		},
+		tableStyle: simpletable.StyleUnicode,
 	}
 }
 
@@ -96,7 +100,7 @@ func (r *Report) Prepare(data *exch.ConsolidatedJson) {
 			}
 
 			item := &reportData{
-				TableContent: formatMainContent(value, &answers).String(),
+				TableContent: formatMainContent(r.tableStyle, value, answers),
 				ItemCount:    amount,
 				ActionType:   actionType,
 			}
@@ -142,7 +146,7 @@ func (r *Report) getTemplate(name string) string {
 	return fmt.Sprintf("%s/%s", strings.Split(r.template, ".")[0], name)
 }
 
-func formatMainContent(items []*exch.ResourceData, deleteTableAnswers *map[bool]string) *simpletable.Table {
+func formatMainContent(tableStyle *simpletable.Style, items []*exch.ResourceData, deleteTableAnswers map[bool]string) *simpletable.Table {
 	headers := []string{"Type", "Name", "Index (if any)"}
 
 	if deleteTableAnswers != nil {
@@ -151,7 +155,7 @@ func formatMainContent(items []*exch.ResourceData, deleteTableAnswers *map[bool]
 
 	log.Debug("Instantiating of report table")
 	table := simpletable.New()
-	table.SetStyle(simpletable.StyleMarkdown)
+	table.SetStyle(tableStyle)
 	table.Header = &simpletable.Header{
 		Cells: []*simpletable.Cell{},
 	}
@@ -187,18 +191,18 @@ func formatMainContent(items []*exch.ResourceData, deleteTableAnswers *map[bool]
 	return table
 }
 
-func isAllowedToRemove(resourceType string, deleteTableAnswers *map[bool]string) string {
+func isAllowedToRemove(resourceType string, deleteTableAnswers map[bool]string) string {
 	if cfg.AppConfig.IsAllCriticalSpecified {
 		if _, ok := cfg.AppConfig.IgnoreList[resourceType]; ok {
-			return (*deleteTableAnswers)[true]
+			return deleteTableAnswers[true]
 		}
 		cfg.AppConfig.CriticalRemovalsFound = true
-		return (*deleteTableAnswers)[false]
+		return deleteTableAnswers[false]
 	} else {
 		if _, ok := cfg.AppConfig.RescueList[resourceType]; ok {
 			cfg.AppConfig.CriticalRemovalsFound = true
-			return (*deleteTableAnswers)[false]
+			return deleteTableAnswers[false]
 		}
-		return (*deleteTableAnswers)[true]
+		return deleteTableAnswers[true]
 	}
 }
