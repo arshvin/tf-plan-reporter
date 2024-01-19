@@ -58,6 +58,6 @@ func Install() error {
 // Clean up after yourself
 func Clean() {
 	fmt.Println("Cleaning...")
-	os.RemoveAll(mainApp)
-	os.RemoveAll(auxApp)
+	os.RemoveAll(path.Base(mainApp))
+	os.RemoveAll(path.Base(auxApp))
 }

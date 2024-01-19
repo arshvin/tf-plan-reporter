@@ -30,10 +30,23 @@ func (cj *ConsolidatedJson) TotalItems() int {
 // parse function parses input data as parameter and puts it to consolidatedJson struct
 func (cj *ConsolidatedJson) Parse(entity *tfJson.Plan) {
 	for _, resource := range entity.ResourceChanges {
+
+		var resourceIndex string
+		switch resource.Index.(type) {
+		case int:
+			resourceIndex = fmt.Sprintf("%d", resource.Index)
+		case string:
+			resourceIndex = fmt.Sprintf("%s", resource.Index)
+		case nil:
+			resourceIndex = ""
+		default:
+			resourceIndex = fmt.Sprint(resource.Index)
+		}
+
 		resourceItem := &ResourceData{
 			Type:  resource.Type,
 			Name:  resource.Name,
-			Index: fmt.Sprint(resource.Index),
+			Index: resourceIndex,
 		}
 
 		tableRecordContext := log.WithFields(log.Fields{

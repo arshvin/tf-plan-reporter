@@ -9,7 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	exch "github.com/arshvin/tf-plan-reporter/internal"
+	cmn "github.com/arshvin/tf-plan-reporter/internal"
 	cfg "github.com/arshvin/tf-plan-reporter/internal/config"
 	"github.com/arshvin/tf-plan-reporter/internal/report"
 
@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	reportTable *exch.ConsolidatedJson = new(exch.ConsolidatedJson)
+	reportTable *cmn.ConsolidatedJson = new(cmn.ConsolidatedJson)
 )
 
 type processingRequest struct {

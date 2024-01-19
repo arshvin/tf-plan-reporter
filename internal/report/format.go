@@ -90,8 +90,13 @@ func (r *Report) Prepare(data *exch.ConsolidatedJson) {
 		amount := len(value)
 
 		if amount > 0 {
+			tableLogger := log.WithFields(
+				log.Fields{
+					"action_type":     actionType,
+					"output_template": path.Base(r.template),
+				})
 
-			log.Debug("Preparing of main content of template section")
+			tableLogger.Debug("Preparing of main content of template section")
 
 			if actionType == deleted {
 				answers = r.answers
@@ -100,7 +105,7 @@ func (r *Report) Prepare(data *exch.ConsolidatedJson) {
 			}
 
 			item := &reportData{
-				TableContent: formatMainContent(r.tableStyle, value, answers),
+				TableContent: formatMainContent(r.tableStyle, value, answers, tableLogger),
 				ItemCount:    amount,
 				ActionType:   actionType,
 			}
@@ -111,7 +116,6 @@ func (r *Report) Prepare(data *exch.ConsolidatedJson) {
 }
 
 func (r *Report) Print() {
-	log.Debug("Output of resource table")
 
 	funcMap := template.FuncMap{
 		"upper": strings.ToUpper,
@@ -120,6 +124,13 @@ func (r *Report) Print() {
 	parentTemplate := template.Must(template.New(path.Base(r.template)).Funcs(funcMap).ParseFS(content, r.template))
 
 	for _, item := range r.data {
+
+		log.WithFields(
+			log.Fields{
+				"action_type":     item.ActionType,
+				"output_template": path.Base(r.template),
+			}).Debug("Output of result table")
+
 		var templatePathName string
 
 		switch item.ActionType {
@@ -146,33 +157,33 @@ func (r *Report) getTemplate(name string) string {
 	return fmt.Sprintf("%s/%s", strings.Split(r.template, ".")[0], name)
 }
 
-func formatMainContent(tableStyle *simpletable.Style, items []*exch.ResourceData, deleteTableAnswers map[bool]string) *simpletable.Table {
+func formatMainContent(tableStyle *simpletable.Style, items []*exch.ResourceData, deleteTableAnswers map[bool]string, logger *log.Entry) *simpletable.Table {
 	headers := []string{"Type", "Name", "Index (if any)"}
 
 	if deleteTableAnswers != nil {
 		headers = slices.Insert(headers, 0, "Allowed to remove")
 	}
 
-	log.Debug("Instantiating of report table")
+	logger.Debug("Instantiating of report table")
 	table := simpletable.New()
 	table.SetStyle(tableStyle)
 	table.Header = &simpletable.Header{
 		Cells: []*simpletable.Cell{},
 	}
 
-	log.Debug("Filling of report table headers")
+	logger.Debug("Filling of report table headers")
 	for _, header := range headers {
 		table.Header.Cells = append(
 			table.Header.Cells, &simpletable.Cell{Align: simpletable.AlignCenter, Text: header},
 		)
 	}
 
-	log.Debug("Sorting elements data elements before table report filling")
+	logger.Debug("Sorting elements data elements before table report filling")
 	slices.SortFunc(items, func(a, b *exch.ResourceData) int {
 		return cmp.Compare(a.Type, b.Type)
 	})
 
-	log.Debug("Filling of report table rows")
+	logger.Debug("Filling of report table rows")
 	for _, item := range items {
 		row := []*simpletable.Cell{
 			{Align: simpletable.AlignLeft, Text: item.Type},
@@ -181,8 +192,11 @@ func formatMainContent(tableStyle *simpletable.Style, items []*exch.ResourceData
 		}
 
 		if deleteTableAnswers != nil {
+			answer := isAllowedToRemove(item.Type, deleteTableAnswers)
+			logger.WithField("resource_type", item.Type).Debugf("Is it OK to remove: %s", answer)
+
 			row = slices.Insert(row, 0,
-				&simpletable.Cell{Align: simpletable.AlignCenter, Text: isAllowedToRemove(item.Type, deleteTableAnswers)})
+				&simpletable.Cell{Align: simpletable.AlignCenter, Text: answer})
 		}
 
 		table.Body.Cells = append(table.Body.Cells, row)
