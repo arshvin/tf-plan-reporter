@@ -112,7 +112,7 @@ func ForGitHub(output io.Writer) *Report {
 }
 
 func formatMainContent(items []*exch.ResourceData, isDeleteTable bool) *simpletable.Table {
-	headers := []string{"Type", "Index", "Name"}
+	headers := []string{"Type", "Name", "Index (if any)"}
 
 	if isDeleteTable {
 		headers = slices.Insert(headers, 0, "Allowed to remove")
@@ -141,8 +141,8 @@ func formatMainContent(items []*exch.ResourceData, isDeleteTable bool) *simpleta
 	for _, item := range items {
 		row := []*simpletable.Cell{
 			{Align: simpletable.AlignLeft, Text: item.Type},
-			{Align: simpletable.AlignLeft, Text: item.Index},
 			{Align: simpletable.AlignLeft, Text: item.Name},
+			{Align: simpletable.AlignLeft, Text: item.Index},
 		}
 
 		if isDeleteTable {
