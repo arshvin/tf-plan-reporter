@@ -57,7 +57,8 @@ func Install() error {
 
 // Clean up after yourself
 func Clean() {
-	fmt.Println("Cleaning...")
+	fmt.Printf("Cleaning of %s...\n", path.Base(mainApp))
 	os.RemoveAll(path.Base(mainApp))
+	fmt.Printf("Cleaning of %s...\n", path.Base(auxApp))
 	os.RemoveAll(path.Base(auxApp))
 }
