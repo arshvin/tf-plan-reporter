@@ -56,25 +56,23 @@ func (cj *ConsolidatedJson) Parse(entity *tfJson.Plan) {
 		})
 		tableRecordContext.Debug("Created new resource item of report table")
 
-		switch {
-		case slices.Contains(resource.Change.Actions, tfJson.ActionCreate):
+		if slices.Contains(resource.Change.Actions, tfJson.ActionCreate) {
 			cj.Created = append(cj.Created, resourceItem)
-
 			tableRecordContext.Debug("The item has been put to 'Created' list")
+		}
 
-		case slices.Contains(resource.Change.Actions, tfJson.ActionDelete):
+		if slices.Contains(resource.Change.Actions, tfJson.ActionDelete) {
 			cj.Deleted = append(cj.Deleted, resourceItem)
-
 			tableRecordContext.Debug("The item has been put to 'Deleted' list")
+		}
 
-		case slices.Contains(resource.Change.Actions, tfJson.ActionUpdate):
+		if slices.Contains(resource.Change.Actions, tfJson.ActionUpdate) {
 			cj.Updated = append(cj.Updated, resourceItem)
-
 			tableRecordContext.Debug("The item has been put to 'Updated' list")
+		}
 
-		case slices.Contains(resource.Change.Actions, tfJson.ActionNoop):
+		if slices.Contains(resource.Change.Actions, tfJson.ActionNoop) {
 			cj.Unchanged = append(cj.Unchanged, resourceItem)
-
 			tableRecordContext.Debug("The item has been put to 'Unchanged' list")
 		}
 	}
