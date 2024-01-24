@@ -6,7 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	app "github.com/arshvin/tf-plan-reporter/internal/config"
+	cfg "github.com/arshvin/tf-plan-reporter/internal/config"
 	analysis "github.com/arshvin/tf-plan-reporter/internal/processing"
 
 	"github.com/spf13/pflag"
@@ -49,10 +49,10 @@ func Execute() {
 	}
 
 	if len(configFileName) > 0 {
-		app.ProcessFileConfig(configFileName)
+		cfg.ProcessFileConfig(configFileName)
 
-		app.AppConfig.ReportFileName = outputFileName
-		app.AppConfig.FailIfCriticalRemovals = exitWithError
+		cfg.AppConfig.ReportFileName = outputFileName
+		cfg.AppConfig.FailIfCriticalRemovals = exitWithError
 
 		analysis.RunSearch()
 		analysis.PrintReport()
@@ -61,7 +61,7 @@ func Execute() {
 	}
 
 	if onlyPrintConfigExample {
-		log.Print("Output to screen the example of config: STUB. It will be implemented soon")
+		cfg.PrintExample()
 		os.Exit(0) //Explicitly
 	}
 
