@@ -33,11 +33,11 @@ type processingRequest struct {
 // 2. fills of `reportTable` variable, by parsed terraform plan data, which further is going to be source of printed report
 func RunSearch() {
 	config := cfg.AppConfig
-	tfPlanFilesPathList := findAllTFPlanFiles(config.SearchFolder, config.PlanFileBasename)
+	tfPlanFilesPathList := findAllTFPlanFiles(config.SearchFolder, config.TfPlanFileBasename)
 
 	foundItems := len(tfPlanFilesPathList)
 	log.WithFields(log.Fields{
-		"plan_basename": config.PlanFileBasename,
+		"plan_basename": config.TfPlanFileBasename,
 		"total_amount":  foundItems,
 	}).Debug("Found terraform generated plan files")
 
@@ -46,10 +46,10 @@ func RunSearch() {
 		pool := make(chan int, runtime.GOMAXPROCS(0))
 		dataPipe := make(chan tfJson.Plan, runtime.GOMAXPROCS(0))
 
-		absCmdBinaryPath := config.BinaryFile
-		if !path.IsAbs(config.BinaryFile) {
+		absCmdBinaryPath := config.TfCmdBinaryFile
+		if !path.IsAbs(config.TfCmdBinaryFile) { //TODO:Better, it needs to implement search of the command by shell capability like `which terraform` of similar
 			cwd, _ := os.Getwd()
-			absCmdBinaryPath = path.Join(cwd, config.BinaryFile)
+			absCmdBinaryPath = path.Join(cwd, config.TfCmdBinaryFile)
 		}
 
 		for _, absTFPlanFilePath := range tfPlanFilesPathList {

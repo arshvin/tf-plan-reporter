@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	cfg "github.com/arshvin/tf-plan-reporter/internal/config"
 	tfJson "github.com/hashicorp/terraform-json"
 	log "github.com/sirupsen/logrus"
 )
@@ -56,8 +57,13 @@ func tfPlanReader(pr *processingRequest) {
 		planFileContext.Fatalf("Could not find the command file: %s", pr.commandName)
 	}
 
-	planDirName := path.Dir(pr.planPath)
-	auxCmdArgs := fmt.Sprintf("-chdir=%s show -json -no-color %s", planDirName, path.Base(pr.planPath))
+	var auxCmdArgs string
+	if cfg.AppConfig.NotUseTfChDirArg { //TODO: To leave couple lines of comments here about each case: what and why is that?
+		auxCmdArgs = fmt.Sprintf("show -json -no-color %s", path.Base(pr.planPath))
+	}else{
+		planDirName := path.Dir(pr.planPath)
+		auxCmdArgs = fmt.Sprintf("-chdir=%s show -json -no-color %s", planDirName, path.Base(pr.planPath))
+	}
 
 	cmdContext := planFileContext.WithFields(log.Fields{
 		"command":        cmdResolvedPath,

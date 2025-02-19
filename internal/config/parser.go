@@ -1,6 +1,9 @@
 package config
 
 import (
+	"slices"
+	"strings"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -24,5 +27,17 @@ func ProcessFileConfig(name string) {
 
 	AppConfig.ConfigFile = config
 
-	defineCriticalResources()
+	if i := slices.IndexFunc(AppConfig.ConfigFile.CriticalResources, func(s string) bool {
+		return strings.TrimSpace(strings.ToLower(s)) == "all"
+	}); i > -1 {
+		AppConfig.IsAllCriticalSpecified = true
+		for _, item := range AppConfig.AllowedRemovals {
+			AppConfig.IgnoreList[strings.ToLower(item)] = true
+		}
+	} else {
+		AppConfig.IsAllCriticalSpecified = false
+		for _, item := range AppConfig.CriticalResources {
+			AppConfig.RescueList[strings.ToLower(item)] = true
+		}
+	}
 }
