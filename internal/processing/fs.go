@@ -59,7 +59,7 @@ func tfPlanReader(pr *processingRequest) {
 
 	var auxCmdArgs string
 	if cfg.AppConfig.NotUseTfChDirArg { //TODO: To leave couple lines of comments here about each case: what and why is that?
-		auxCmdArgs = fmt.Sprintf("show -json -no-color %s", path.Base(pr.planPath))
+		auxCmdArgs = fmt.Sprintf("show -json -no-color %s", pr.planPath)
 	}else{
 		planDirName := path.Dir(pr.planPath)
 		auxCmdArgs = fmt.Sprintf("-chdir=%s show -json -no-color %s", planDirName, path.Base(pr.planPath))
