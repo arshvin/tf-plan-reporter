@@ -18,6 +18,7 @@ func ProcessFileConfig(name string) {
 		log.Panic(err)
 	}
 
+	//FIXME: Figure out what happens here if config is not valid
 	var config ConfigFile
 	if err := viper_runtime.Unmarshal(&config); err != nil {
 		log.Panic(err)

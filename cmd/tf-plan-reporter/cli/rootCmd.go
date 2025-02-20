@@ -64,7 +64,7 @@ func Execute() {
 		cfg.PrintExample()
 		os.Exit(0) //Explicitly
 	}
-
+	//FIXME:"pflag: help requested" output once --help arg is used
 	pflag.Usage()
 	log.Fatalf("It must be chosen one of the following flags: %s, %s", configFileArg, printConfigExampleArg)
 }

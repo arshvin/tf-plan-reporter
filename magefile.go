@@ -26,7 +26,7 @@ func BuildMainApp() error {
 	fmt.Printf("Building of '%s' ...\n", path.Base(mainApp))
 
 	envs := make(map[string]string)
-	envs["CGO_ENABLED"] = "0"
+	envs["CGO_ENABLED"] = "0" //TODO: I'd want to be able to setup it from shell as well
 
 	return build(envs, path.Base(mainApp), mainApp)
 
@@ -37,7 +37,7 @@ func BuildTestApp() error {
 	fmt.Printf("Building of '%s' ...\n", path.Base(auxApp))
 
 	envs := make(map[string]string)
-	envs["CGO_ENABLED"] = "0"
+	envs["CGO_ENABLED"] = "0" //TODO: I'd want to be able to setup it from shell as well
 
 	return build(envs, path.Base(auxApp), auxApp)
 
@@ -52,7 +52,7 @@ func build(envs map[string]string, binName, packPath string) error {
 func Install() error {
 	mg.Deps(BuildMainApp)
 	fmt.Println("Installing...")
-	return os.Rename(mainApp, fmt.Sprintf("/usr/bin/%s", mainApp))
+	return os.Rename(mainApp, fmt.Sprintf("/usr/bin/%s", mainApp)) //FIXME: Here is something wrong happening
 }
 
 // Clean up after yourself
