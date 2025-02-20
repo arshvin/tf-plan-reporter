@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
@@ -13,33 +14,39 @@ import (
 )
 
 const (
-	mainApp = "./cmd/tf-plan-reporter"
-	auxApp  = "./cmd/test-plan-reader"
+	mainAppPackagePath = "./cmd/tf-plan-reporter"
+	auxAppPackagePath  = "./cmd/test-plan-reader"
 )
 
 // Default target to run when none is specified
 // If not set, running mage will list available targets
-var Default = BuildMainApp
+var Default = BuildMainApp 
 
-// A build step of the main App
-func BuildMainApp() error {
-	fmt.Printf("Building of '%s' ...\n", path.Base(mainApp))
+// A build target of the Main App (tf-plan-reporter)
+func BuildMainApp(ctx context.Context) error {
+	fmt.Printf("Building of '%s' ...\n", path.Base(mainAppPackagePath))
 
 	envs := make(map[string]string)
-	envs["CGO_ENABLED"] = "0" //TODO: I'd want to be able to setup it from shell as well
+	if os.Getenv("CGO_ENABLED") != "" {
+		envs["CGO_ENABLED"] = os.Getenv("CGO_ENABLED")
+		fmt.Printf("CGO_ENABLED environment variable was set up to: %s\n", os.Getenv("CGO_ENABLED"))
+	}
 
-	return build(envs, path.Base(mainApp), mainApp)
+	return build(envs, path.Base(mainAppPackagePath), mainAppPackagePath)
 
 }
 
-// A build step of the test App
+// A build target of the Auxiliary Test App (test-plan-reader)
 func BuildTestApp() error {
-	fmt.Printf("Building of '%s' ...\n", path.Base(auxApp))
+	fmt.Printf("Building of '%s' ...\n", path.Base(auxAppPackagePath))
 
 	envs := make(map[string]string)
-	envs["CGO_ENABLED"] = "0" //TODO: I'd want to be able to setup it from shell as well
+	if os.Getenv("CGO_ENABLED") != "" {
+		envs["CGO_ENABLED"] = os.Getenv("CGO_ENABLED")
+		fmt.Printf("CGO_ENABLED environment variable was set up to: %s\n", os.Getenv("CGO_ENABLED"))
+	}
 
-	return build(envs, path.Base(auxApp), auxApp)
+	return build(envs, path.Base(auxAppPackagePath), auxAppPackagePath)
 
 }
 
@@ -48,17 +55,22 @@ func build(envs map[string]string, binName, packPath string) error {
 	return sh.RunWith(envs, "go", "build", "-o", binName, packPath)
 }
 
-// A custom install step if you need your bin someplace other than go/bin
-func Install() error {
+// A custom install step to target folder 
+func Install(targetFolder string) error {
+	if targetFolder == "" {
+		fmt.Errorf("Target folder must not be an empty string")
+	}
+	
 	mg.Deps(BuildMainApp)
-	fmt.Println("Installing...")
-	return os.Rename(mainApp, fmt.Sprintf("/usr/bin/%s", mainApp)) //FIXME: Here is something wrong happening
+
+	fmt.Printf("Installing to %s...\n", targetFolder)
+	return os.Rename(path.Base(mainAppPackagePath), fmt.Sprintf("%s/%s", targetFolder,path.Base(mainAppPackagePath))) 
 }
 
 // Clean up after yourself
 func Clean() {
-	fmt.Printf("Cleaning of %s...\n", path.Base(mainApp))
-	os.RemoveAll(path.Base(mainApp))
-	fmt.Printf("Cleaning of %s...\n", path.Base(auxApp))
-	os.RemoveAll(path.Base(auxApp))
+	fmt.Printf("Cleaning of %s...\n", path.Base(mainAppPackagePath))
+	os.RemoveAll(path.Base(mainAppPackagePath))
+	fmt.Printf("Cleaning of %s...\n", path.Base(auxAppPackagePath))
+	os.RemoveAll(path.Base(auxAppPackagePath))
 }
