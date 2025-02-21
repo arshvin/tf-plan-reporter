@@ -18,13 +18,17 @@ const (
 	printConfigExampleArg = "print-example"
 )
 
+var (
+	configFileName         string
+	outputFileName         string
+	onlyPrintConfigExample bool
+	exitWithError          bool
+	debugOutput            bool
+	noColor                bool
+)
+
+// Entry point of tf-plan-reporter tool
 func Execute() {
-	var configFileName string
-	var outputFileName string
-	var onlyPrintConfigExample bool
-	var exitWithError bool
-	var debugOutput bool
-	var noColor bool
 
 	flag.StringVar(&configFileName, configFileArg, "", "Config file name of the App")
 	flag.StringVar(&outputFileName, "report-file", "", "Output file name of the report ")
@@ -34,7 +38,13 @@ func Execute() {
 	flag.BoolVar(&debugOutput, "verbose", false, "Add debug logging output")
 	flag.BoolVar(&noColor, "no-color", false, "Turn off color output in log messages")
 
+	flag.Bool("help", false, "help message output")
+	flag.Bool("h", false, "help message output")
+
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+	pflag.CommandLine.MarkHidden("help")
+	pflag.CommandLine.MarkHidden("h")
+
 	pflag.Parse()
 	viper.BindPFlags(pflag.CommandLine)
 
@@ -48,8 +58,18 @@ func Execute() {
 		})
 	}
 
+	if ok, _ := pflag.CommandLine.GetBool("help"); ok {
+		pflag.Usage()
+		os.Exit(0) //Explicitly
+	}
+
+	if onlyPrintConfigExample {
+		cfg.PrintExample()
+		os.Exit(0) //Explicitly
+	}
+
 	if len(configFileName) > 0 {
-		cfg.ProcessFileConfig(configFileName)
+		cfg.Parse(configFileName)
 
 		cfg.AppConfig.ReportFileName = outputFileName
 		cfg.AppConfig.FailIfCriticalRemovals = exitWithError
@@ -60,11 +80,6 @@ func Execute() {
 		os.Exit(0) //Explicitly
 	}
 
-	if onlyPrintConfigExample {
-		cfg.PrintExample()
-		os.Exit(0) //Explicitly
-	}
-	//FIXME:"pflag: help requested" output once --help arg is used
 	pflag.Usage()
-	log.Fatalf("It must be chosen one of the following flags: %s, %s", configFileArg, printConfigExampleArg)
+	log.Fatalf("At least one of the following flags must be chosen: %s, %s", configFileArg, printConfigExampleArg)
 }

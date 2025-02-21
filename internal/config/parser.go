@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func ProcessFileConfig(name string) {
+func Parse(name string) {
 	viper_runtime := viper.New()
 
 	viper_runtime.SetConfigType("yaml")
