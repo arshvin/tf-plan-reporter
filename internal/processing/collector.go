@@ -7,12 +7,70 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 
-	cfg "github.com/arshvin/tf-plan-reporter/internal/config"
-	tfJson "github.com/hashicorp/terraform-json"
 	log "github.com/sirupsen/logrus"
+	tfJson "github.com/hashicorp/terraform-json"
 )
+
+type processingRequest struct {
+	commandName string
+	planPath    string
+	parsedData  chan<- tfJson.Plan
+	pool        chan int
+	notChDir    bool
+}
+
+// CollectBinaryData function does:
+// 1. searches all terraform generated binary plan files, with basename specified in `terraform_plan_file_basename`,
+// starting from root director specified in `terraform_plan_search_folder` config file parameter
+// 2. fills of `reportData` variable, by parsed terraform plan data, which further is going to be source of printed report
+func CollectBinaryData(startPath string, planBaseFileName string, cmdFullPathName string, notChDir bool) *ConsolidatedJson {
+	foundPlanFiles := findAllTFPlanFiles(startPath, planBaseFileName)
+
+	foundItems := len(foundPlanFiles)
+	log.WithFields(log.Fields{
+		"plan_basename": planBaseFileName,
+		"total_amount":  foundItems,
+	}).Debug("Found terraform generated plan files")
+
+	reportData := new(ConsolidatedJson)
+
+	if foundItems > 0 {
+
+		pool := make(chan int, runtime.GOMAXPROCS(0))
+		dataPipe := make(chan tfJson.Plan, runtime.GOMAXPROCS(0))
+
+		absCmdBinaryPath := cmdFullPathName
+		if !path.IsAbs(cmdFullPathName) { //TODO:This is not a goal of this function - it should give what it has been passed to and use. It'd be better to implement some "validation" config step outside of this function
+			cwd, _ := os.Getwd()
+			absCmdBinaryPath = path.Join(cwd, cmdFullPathName)
+		}
+
+		for _, absTFPlanFilePath := range foundPlanFiles {
+			pr := &processingRequest{
+				commandName: absCmdBinaryPath,
+				planPath:    absTFPlanFilePath,
+				parsedData:  dataPipe,
+				pool:        pool,
+				notChDir:    notChDir,
+			}
+
+			go tfPlanReader(pr) //Async TF plan reader
+		}
+
+		//Parsing of read data
+		log.Debug("Waiting of data from read TF plan files for processing")
+		for item := 0; item < foundItems; item++ {
+			tfPlan := <-dataPipe
+
+			reportData.Parse(&tfPlan)
+		}
+	}
+
+	return reportData
+}
 
 func findAllTFPlanFiles(rootDir string, fileBasename string) []string {
 	var result []string
@@ -58,9 +116,9 @@ func tfPlanReader(pr *processingRequest) {
 	}
 
 	var auxCmdArgs string
-	if cfg.AppConfig.NotUseTfChDirArg { //TODO: To leave couple lines of comments here about each case: what and why is that?
+	if pr.notChDir { //TODO: To leave couple lines of comments here about each case: what and why is that?
 		auxCmdArgs = fmt.Sprintf("show -json -no-color %s", pr.planPath)
-	}else{
+	} else {
 		planDirName := path.Dir(pr.planPath)
 		auxCmdArgs = fmt.Sprintf("-chdir=%s show -json -no-color %s", planDirName, path.Base(pr.planPath))
 	}

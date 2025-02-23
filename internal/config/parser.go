@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func Parse(name string) {
+func Parse(name string) *AppConfig {
 	viper_runtime := viper.New()
 
 	viper_runtime.SetConfigType("yaml")
@@ -18,27 +18,30 @@ func Parse(name string) {
 		log.Panic(err)
 	}
 
-	//FIXME: Figure out what happens here if config is not valid
-	var config ConfigFile
-	if err := viper_runtime.Unmarshal(&config); err != nil {
+	appConfig := create()
+	//FIXME: Figure out what happens here if configFile is not valid
+	var configFile ConfigFile
+	if err := viper_runtime.Unmarshal(&configFile); err != nil {
 		log.Panic(err)
 	}
 
-	log.Debugf("Content of config file/structure: %v", config)
+	log.Debugf("Content of config file/structure: %v", configFile)
 
-	AppConfig.ConfigFile = config
+	appConfig.ConfigFile = configFile
 
-	if i := slices.IndexFunc(AppConfig.ConfigFile.CriticalResources, func(s string) bool {
+	if i := slices.IndexFunc(appConfig.ConfigFile.CriticalResources, func(s string) bool {
 		return strings.TrimSpace(strings.ToLower(s)) == "all"
 	}); i > -1 {
-		AppConfig.IsAllCriticalSpecified = true
-		for _, item := range AppConfig.AllowedRemovals {
-			AppConfig.IgnoreList[strings.ToLower(item)] = true
+		appConfig.IsAllCriticalSpecified = true
+		for _, item := range appConfig.AllowedRemovals {
+			appConfig.IgnoreList[strings.ToLower(item)] = true
 		}
 	} else {
-		AppConfig.IsAllCriticalSpecified = false
-		for _, item := range AppConfig.CriticalResources {
-			AppConfig.RescueList[strings.ToLower(item)] = true
+		appConfig.IsAllCriticalSpecified = false
+		for _, item := range appConfig.CriticalResources {
+			appConfig.RescueList[strings.ToLower(item)] = true
 		}
 	}
+
+	return appConfig
 }

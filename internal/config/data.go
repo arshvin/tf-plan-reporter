@@ -6,7 +6,7 @@ type ConfigFile struct {
 	SearchFolder       string   `mapstructure:"terraform_plan_search_folder"`
 	CriticalResources  []string `mapstructure:"critical_resources"`
 	AllowedRemovals    []string `mapstructure:"allowed_removals"`
-	NotUseTfChDirArg        bool     `mapstructure:"not_use_chdir,omitempty"`
+	NotUseTfChDirArg   bool     `mapstructure:"not_use_chdir,omitempty"`
 }
 
 type DefensePlan struct {
@@ -15,7 +15,7 @@ type DefensePlan struct {
 	IgnoreList             map[string]bool
 }
 
-type MergedConfig struct {
+type AppConfig struct {
 	ConfigFile
 	ReportFileName         string
 	FailIfCriticalRemovals bool
@@ -23,10 +23,9 @@ type MergedConfig struct {
 	DefensePlan
 }
 
-var AppConfig *MergedConfig
-
-func init() {
-	AppConfig = new(MergedConfig)
-	AppConfig.RescueList = make(map[string]bool)
-	AppConfig.IgnoreList = make(map[string]bool)
+func create() *AppConfig {
+	appCfg := new(AppConfig)
+	appCfg.RescueList = make(map[string]bool)
+	appCfg.IgnoreList = make(map[string]bool)
+	return appCfg
 }

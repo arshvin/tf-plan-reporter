@@ -6,8 +6,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	cfg "github.com/arshvin/tf-plan-reporter/internal/config"
-	analysis "github.com/arshvin/tf-plan-reporter/internal/processing"
+	"github.com/arshvin/tf-plan-reporter/internal/config"
+	"github.com/arshvin/tf-plan-reporter/internal/processing"
+	"github.com/arshvin/tf-plan-reporter/internal/report"
 
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -64,18 +65,23 @@ func Execute() {
 	}
 
 	if onlyPrintConfigExample {
-		cfg.PrintExample()
+		config.PrintExample()
 		os.Exit(0) //Explicitly
 	}
 
 	if len(configFileName) > 0 {
-		cfg.Parse(configFileName)
+		settings := config.Parse(configFileName)
 
-		cfg.AppConfig.ReportFileName = outputFileName
-		cfg.AppConfig.FailIfCriticalRemovals = exitWithError
+		settings.ReportFileName = outputFileName
+		settings.FailIfCriticalRemovals = exitWithError
 
-		analysis.RunSearch()
-		analysis.PrintReport()
+		collectedData := processing.CollectBinaryData(settings.SearchFolder,settings.TfPlanFileBasename,settings.TfCmdBinaryFile,settings.NotUseTfChDirArg)
+		report.PrintReport(collectedData,settings.ReportFileName)
+
+		//FIXME: Make sure that it'll be working here
+		// if settings.FailIfCriticalRemovals && settings.CriticalRemovalsFound {
+		// 	log.Fatal("There are critical resources removal in the report")
+		// }
 
 		os.Exit(0) //Explicitly
 	}
