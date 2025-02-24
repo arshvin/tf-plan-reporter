@@ -150,7 +150,6 @@ func (r *report) Print() {
 			log.Fatal(err)
 		}
 	}
-
 }
 
 func (r *report) getTemplate(name string) string {
@@ -183,6 +182,8 @@ func formatMainContent(tableStyle *simpletable.Style, items []*processing.Resour
 		return cmp.Compare(a.Type, b.Type)
 	})
 
+	decisionMaker := processing.GetDecisionMaker()
+
 	logger.Debug("Filling of report table rows")
 	for _, item := range items {
 		row := []*simpletable.Cell{
@@ -192,8 +193,7 @@ func formatMainContent(tableStyle *simpletable.Style, items []*processing.Resour
 		}
 
 		if deleteTableAnswers != nil {
-			var answer string
-			// answer := isAllowedToRemove(item.Type, deleteTableAnswers)
+			answer := deleteTableAnswers[decisionMaker.IsAllowed(item.Type)]
 			logger.WithField("resource_type", item.Type).Debugf("Is it OK to remove: %s", answer)
 
 			row = slices.Insert(row, 0,
@@ -205,19 +205,3 @@ func formatMainContent(tableStyle *simpletable.Style, items []*processing.Resour
 
 	return table
 }
-
-// func isAllowedToRemove(resourceType string, deleteTableAnswers map[bool]string) string {
-// 	if cfg.AppConfig.IsAllCriticalSpecified {
-// 		if _, ok := cfg.AppConfig.IgnoreList[resourceType]; ok {
-// 			return deleteTableAnswers[true]
-// 		}
-// 		cfg.AppConfig.CriticalRemovalsFound = true
-// 		return deleteTableAnswers[false]
-// 	} else {
-// 		if _, ok := cfg.AppConfig.RescueList[resourceType]; ok {
-// 			cfg.AppConfig.CriticalRemovalsFound = true
-// 			return deleteTableAnswers[false]
-// 		}
-// 		return deleteTableAnswers[true]
-// 	}
-// }

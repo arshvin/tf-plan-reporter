@@ -76,12 +76,12 @@ func Execute() {
 		settings.FailIfCriticalRemovals = exitWithError
 
 		collectedData := processing.CollectBinaryData(settings.SearchFolder,settings.TfPlanFileBasename,settings.TfCmdBinaryFile,settings.NotUseTfChDirArg)
+		processing.GetDecisionMaker().SetConfig(settings)
 		report.PrintReport(collectedData,settings.ReportFileName)
 
-		//FIXME: Make sure that it'll be working here
-		// if settings.FailIfCriticalRemovals && settings.CriticalRemovalsFound {
-		// 	log.Fatal("There are critical resources removal in the report")
-		// }
+		if settings.FailIfCriticalRemovals && settings.CriticalRemovalsFound {
+			log.Fatal("There are critical resources removal in the report")
+		}
 
 		os.Exit(0) //Explicitly
 	}
