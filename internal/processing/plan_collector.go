@@ -38,19 +38,20 @@ func CollectBinaryData(startPath string, planBaseFileName string, cmdFullPathNam
 	reportData := new(ConsolidatedJson)
 
 	if foundItems > 0 {
+		log.Debug("Checking if Terraform providers folder exists near with TF plan files in advance")
+
+		for _, absTFPlanFilePath := range foundPlanFiles {
+			if !TfProviderFolderExist(absTFPlanFilePath){
+				log.Fatalf("Terraform providers folder was not found inside of: %s",absTFPlanFilePath)
+			}
+		}
 
 		pool := make(chan int, runtime.GOMAXPROCS(0))
 		dataPipe := make(chan tfJson.Plan, runtime.GOMAXPROCS(0))
 
-		absCmdBinaryPath := cmdFullPathName
-		if !path.IsAbs(cmdFullPathName) { //TODO:This is not a goal of this function - it should give what it has been passed to and use. It'd be better to implement some "validation" config step outside of this function
-			cwd, _ := os.Getwd()
-			absCmdBinaryPath = path.Join(cwd, cmdFullPathName)
-		}
-
 		for _, absTFPlanFilePath := range foundPlanFiles {
 			pr := &processingRequest{
-				commandName: absCmdBinaryPath,
+				commandName: cmdFullPathName,
 				planPath:    absTFPlanFilePath,
 				parsedData:  dataPipe,
 				pool:        pool,

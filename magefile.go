@@ -20,7 +20,7 @@ const (
 
 // Default target to run when none is specified
 // If not set, running mage will list available targets
-var Default = BuildMainApp 
+var Default = BuildMainApp
 
 // A build target of the Main App (tf-plan-reporter)
 func BuildMainApp(ctx context.Context) error {
@@ -55,16 +55,16 @@ func build(envs map[string]string, binName, packPath string) error {
 	return sh.RunWith(envs, "go", "build", "-o", binName, packPath)
 }
 
-// A custom install step to target folder 
+// A custom install step to target folder
 func Install(targetFolder string) error {
 	if targetFolder == "" {
 		fmt.Errorf("Target folder must not be an empty string")
 	}
-	
+
 	mg.Deps(BuildMainApp)
 
 	fmt.Printf("Installing to %s...\n", targetFolder)
-	return os.Rename(path.Base(mainAppPackagePath), fmt.Sprintf("%s/%s", targetFolder,path.Base(mainAppPackagePath))) 
+	return os.Rename(path.Base(mainAppPackagePath), fmt.Sprintf("%s/%s", targetFolder,path.Base(mainAppPackagePath)))
 }
 
 // Clean up after yourself

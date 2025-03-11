@@ -19,7 +19,6 @@ type AppConfig struct {
 	ConfigFile
 	ReportFileName         string
 	FailIfCriticalRemovals bool
-	CriticalRemovalsFound  bool
 	DefensePlan
 }
 

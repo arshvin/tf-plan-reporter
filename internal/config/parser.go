@@ -1,6 +1,8 @@
 package config
 
 import (
+	"os"
+	"path"
 	"slices"
 	"strings"
 
@@ -27,7 +29,6 @@ func Parse(name string) *AppConfig {
 	}
 
 	log.Debugf("Content of config file/structure: %v", configFile)
-
 	appConfig.ConfigFile = configFile
 
 	if i := slices.IndexFunc(appConfig.ConfigFile.CriticalResources, func(s string) bool {
@@ -43,6 +44,15 @@ func Parse(name string) *AppConfig {
 			appConfig.RescueList[strings.ToLower(item)] = true
 		}
 	}
+
+	//Replacing of relative TF command path to absolute one if it's required
+	if !path.IsAbs(appConfig.TfCmdBinaryFile) {
+			cwd, err := os.Getwd()
+			if err != nil{
+				log.Fatal("Could not get current working dir")
+			}
+			appConfig.TfCmdBinaryFile = path.Join(cwd, appConfig.TfCmdBinaryFile)
+		}
 
 	return appConfig
 }

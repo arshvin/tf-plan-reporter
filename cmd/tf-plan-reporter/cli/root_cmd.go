@@ -72,15 +72,36 @@ func Execute() {
 	if len(configFileName) > 0 {
 		settings := config.Parse(configFileName)
 
+		//Similar checking, if settings.NotUseTfChDirArg == false, will be further once all tf-plan files found
+		if settings.NotUseTfChDirArg {
+			log.Debug("Checking if Terraform providers folder exists in current folder in advance")
+
+			cwd, err := os.Getwd()
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if !processing.TfProviderFolderExist(cwd){
+				log.Fatal("Terraform providers folder was not found in current working directory")
+			}
+		}
+
 		settings.ReportFileName = outputFileName
 		settings.FailIfCriticalRemovals = exitWithError
 
-		collectedData := processing.CollectBinaryData(settings.SearchFolder,settings.TfPlanFileBasename,settings.TfCmdBinaryFile,settings.NotUseTfChDirArg)
-		processing.GetDecisionMaker().SetConfig(settings)
+		collectedData := processing.CollectBinaryData(
+			settings.SearchFolder,
+			settings.TfPlanFileBasename,
+			settings.TfCmdBinaryFile,
+			settings.NotUseTfChDirArg,
+		)
+
+		dm:=processing.GetDecisionMaker()
+		dm.SetConfig(settings)
+
 		report.PrintReport(collectedData,settings.ReportFileName)
 
-		//FIXME: settings.CriticalRemovalsFound must be replaced with with some method of decitionMaker, providing access to similar field of it internals
-		if settings.FailIfCriticalRemovals && settings.CriticalRemovalsFound {
+		if settings.FailIfCriticalRemovals && dm.CriticalRemovalsFound() {
 			log.Fatal("There are critical resources removal in the report")
 		}
 
