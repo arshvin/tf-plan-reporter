@@ -72,6 +72,7 @@ func CollectBinaryData(startPath string, planBaseFileName string, cmdFullPathNam
 	return reportData
 }
 
+//TODO: Implement test of this function to make sure that it works as expected
 func findAllTFPlanFiles(rootDir string, fileBasename string) []string {
 	var result []string
 	if !path.IsAbs(rootDir) {

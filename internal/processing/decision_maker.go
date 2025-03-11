@@ -23,6 +23,7 @@ func (dm *DecisionMaker) SetConfig(config *config.AppConfig) {
 	dm.config = config
 }
 
+//TODO: implement test for this function to make sure that it works as expected
 func (dm *DecisionMaker) IsAllowed(resourceType string) bool {
 	if dm.config.IsAllCriticalSpecified {
 		if _, ok := dm.config.IgnoreList[resourceType]; ok {

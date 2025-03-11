@@ -79,6 +79,7 @@ func Execute() {
 		processing.GetDecisionMaker().SetConfig(settings)
 		report.PrintReport(collectedData,settings.ReportFileName)
 
+		//FIXME: settings.CriticalRemovalsFound must be replaced with with some method of decitionMaker, providing access to similar field of it internals
 		if settings.FailIfCriticalRemovals && settings.CriticalRemovalsFound {
 			log.Fatal("There are critical resources removal in the report")
 		}
