@@ -26,5 +26,6 @@ func create() *AppConfig {
 	appCfg := new(AppConfig)
 	appCfg.RescueList = make(map[string]bool)
 	appCfg.IgnoreList = make(map[string]bool)
+
 	return appCfg
 }

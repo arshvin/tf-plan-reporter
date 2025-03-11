@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-//TODO: implement test that config file is parsed with different values correctly: optional, mandatory, etc.
+// TODO: implement test that config file is parsed with different values correctly: optional, mandatory, etc.
 func Parse(name string) *AppConfig {
 	viper_runtime := viper.New()
 
@@ -47,12 +47,21 @@ func Parse(name string) *AppConfig {
 
 	//Replacing of relative TF command path to absolute one if it's required
 	if !path.IsAbs(appConfig.TfCmdBinaryFile) {
-			cwd, err := os.Getwd()
-			if err != nil{
-				log.Fatal("Could not get current working dir")
-			}
-			appConfig.TfCmdBinaryFile = path.Join(cwd, appConfig.TfCmdBinaryFile)
+		cwd, err := os.Getwd()
+		if err != nil {
+			log.Fatal("Could not get current working dir")
 		}
+		appConfig.TfCmdBinaryFile = path.Join(cwd, appConfig.TfCmdBinaryFile)
+	}
+
+	//Replacing of relative SearchFolder path to absolute one if it's required
+	if !path.IsAbs(appConfig.SearchFolder) {
+		cwd, err := os.Getwd()
+		if err != nil {
+			log.Fatal("Could not get current working dir")
+		}
+		appConfig.SearchFolder = path.Join(cwd, appConfig.SearchFolder)
+	}
 
 	return appConfig
 }

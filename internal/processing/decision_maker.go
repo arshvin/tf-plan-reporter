@@ -42,6 +42,7 @@ func (dm *DecisionMaker) IsAllowed(resourceType string) bool {
 	if dm.config.IsAllCriticalSpecified {
 		if _, ok := dm.config.IgnoreList[resourceType]; ok {
 			log.Debugf("Resource type %s found in IgnoreList -> Allowed to delete", resourceType)
+
 			return true
 		}
 

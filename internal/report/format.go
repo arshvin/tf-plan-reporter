@@ -153,7 +153,9 @@ func (r *report) Print() {
 }
 
 func (r *report) getTemplate(name string) string {
+
 	return fmt.Sprintf("%s/%s", strings.Split(r.template, ".")[0], name)
+
 }
 
 func formatMainContent(tableStyle *simpletable.Style, items []*processing.ResourceData, deleteTableAnswers map[bool]string, logger *log.Entry) *simpletable.Table {

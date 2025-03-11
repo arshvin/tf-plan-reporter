@@ -26,8 +26,8 @@ type processingRequest struct {
 // 1. searches all terraform generated binary plan files, with basename specified in `terraform_plan_file_basename`,
 // starting from root director specified in `terraform_plan_search_folder` config file parameter
 // 2. fills of `reportData` variable, by parsed terraform plan data, which further is going to be source of printed report
-func CollectBinaryData(startPath string, planBaseFileName string, cmdFullPathName string, notChDir bool) *ConsolidatedJson {
-	foundPlanFiles := findAllTFPlanFiles(startPath, planBaseFileName)
+func CollectBinaryData(searchFolder string, planBaseFileName string, cmdFullPathName string, notChDir bool) *ConsolidatedJson {
+	foundPlanFiles := findAllTFPlanFiles(searchFolder, planBaseFileName)
 
 	foundItems := len(foundPlanFiles)
 	log.WithFields(log.Fields{
@@ -74,17 +74,10 @@ func CollectBinaryData(startPath string, planBaseFileName string, cmdFullPathNam
 }
 
 //TODO: Implement test of this function to make sure that it works as expected
-func findAllTFPlanFiles(rootDir string, fileBasename string) []string {
+func findAllTFPlanFiles(searchFolder string, fileBasename string) []string {
 	var result []string
-	if !path.IsAbs(rootDir) {
-		cwd, err := os.Getwd()
-		if err != nil {
-			log.Fatal("Could not get current working dir")
-		}
-		rootDir = path.Join(cwd, rootDir)
-	}
 
-	if err := filepath.WalkDir(rootDir, func(currentPath string, d fs.DirEntry, err error) error {
+	if err := filepath.WalkDir(searchFolder, func(currentPath string, d fs.DirEntry, err error) error {
 
 		if d.Type().IsRegular() {
 			pathElements := strings.Split(currentPath, string(os.PathSeparator))
