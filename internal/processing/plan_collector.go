@@ -42,7 +42,7 @@ func CollectBinaryData(searchFolder string, planBaseFileName string, cmdFullPath
 
 		for _, absTFPlanFilePath := range foundPlanFiles {
 			if !TfProviderFolderExist(absTFPlanFilePath){
-				log.Fatalf("Terraform providers folder was not found inside of: %s",absTFPlanFilePath)
+				log.Fatalf("Terraform providers folder (.terraform/providers) was not found inside of: %s",absTFPlanFilePath)
 			}
 		}
 

@@ -6,7 +6,7 @@ type ConfigFile struct {
 	SearchFolder       string   `mapstructure:"terraform_plan_search_folder"`
 	CriticalResources  []string `mapstructure:"critical_resources"`
 	AllowedRemovals    []string `mapstructure:"allowed_removals"`
-	NotUseTfChDirArg   bool     `mapstructure:"not_use_chdir,omitempty"`
+	NotUseTfChDirArg   bool     `mapstructure:"not_use_chdir"`
 }
 
 type DefensePlan struct {

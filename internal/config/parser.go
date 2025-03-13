@@ -1,8 +1,6 @@
 package config
 
 import (
-	"os"
-	"path"
 	"slices"
 	"strings"
 
@@ -22,7 +20,6 @@ func Parse(name string) *AppConfig {
 	}
 
 	appConfig := create()
-	//FIXME: Figure out what happens here if configFile is not valid
 	var configFile ConfigFile
 	if err := viper_runtime.Unmarshal(&configFile); err != nil {
 		log.Panic(err)
@@ -43,24 +40,6 @@ func Parse(name string) *AppConfig {
 		for _, item := range appConfig.CriticalResources {
 			appConfig.RescueList[strings.ToLower(item)] = true
 		}
-	}
-
-	//Replacing of relative TF command path to absolute one if it's required
-	if !path.IsAbs(appConfig.TfCmdBinaryFile) {
-		cwd, err := os.Getwd()
-		if err != nil {
-			log.Fatal("Could not get current working dir")
-		}
-		appConfig.TfCmdBinaryFile = path.Join(cwd, appConfig.TfCmdBinaryFile)
-	}
-
-	//Replacing of relative SearchFolder path to absolute one if it's required
-	if !path.IsAbs(appConfig.SearchFolder) {
-		cwd, err := os.Getwd()
-		if err != nil {
-			log.Fatal("Could not get current working dir")
-		}
-		appConfig.SearchFolder = path.Join(cwd, appConfig.SearchFolder)
 	}
 
 	return appConfig

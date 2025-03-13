@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/arshvin/tf-plan-reporter/internal"
 	"github.com/arshvin/tf-plan-reporter/internal/config"
 	"github.com/arshvin/tf-plan-reporter/internal/processing"
 	"github.com/arshvin/tf-plan-reporter/internal/report"
@@ -71,19 +72,8 @@ func Execute() {
 
 	if len(configFileName) > 0 {
 		settings := config.Parse(configFileName)
-
-		//Similar checking, if settings.NotUseTfChDirArg == false, will be further once all tf-plan files found
-		if settings.NotUseTfChDirArg {
-			log.Debug("Checking if Terraform providers folder exists in current folder in advance")
-
-			cwd, err := os.Getwd()
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			if !processing.TfProviderFolderExist(cwd){
-				log.Fatal("Terraform providers folder was not found in current working directory")
-			}
+		if err:= internal.Validate(settings); err != nil{
+			log.Fatal(err)
 		}
 
 		settings.ReportFileName = outputFileName
