@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"fmt"
 	"os"
 	"slices"
 	"strings"
@@ -25,13 +24,13 @@ func Execute() {
 
 	newCwd, newArgs, err := extractChdirOption(os.Args[1:])
 	if err != nil {
-		log.Fatal(fmt.Sprintf("Invalid -chdir option: %s", err))
+		log.Fatalf("Invalid -chdir option: %s", err)
 	}
 
 	if newCwd != "" {
 		err := os.Chdir(newCwd)
 		if err != nil {
-			log.Fatalf(fmt.Sprintf("Error handling -chdir option: %s", err))
+			log.Fatalf("Error handling -chdir option: %s", err)
 		}
 	}
 
@@ -49,6 +48,6 @@ func Execute() {
 		return strings.Join(modifiedHelp, "\n")
 	}
 
-	//nolint: errcheck
+
 	appCli.Run()
 }
