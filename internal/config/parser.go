@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-// TODO: implement test that config file is parsed with different values correctly: optional, mandatory, etc.
 func Parse(name string) *AppConfig {
 	viper_runtime := viper.New()
 

@@ -69,16 +69,17 @@ func TfProviderFolderExist(prefix string) bool {
 	info, err := os.Lstat(providersFolder)
 
 	if err != nil {
-		log.Fatalf("An error has happened: %s",err)
+		log.Debugf("Provider folder does not exist: %s", providersFolder)
+		return false
 	}
 
 	if info.IsDir() {
-		log.Debugf("Provider folder was successfully FOUND: %s", providersFolder)
+		log.Debugf("Provider folder was successfully found: %s", providersFolder)
 
 		return true
 	}
 
-	log.Debugf("Provider folder WAS NOT found: %s", providersFolder)
+	log.Debugf("The path is not folder: %s", providersFolder)
 
 	return false
 }
