@@ -1,6 +1,6 @@
 module github.com/arshvin/tf-plan-reporter
 
-go 1.21
+go 1.24
 
 require (
 	github.com/alexeyco/simpletable v1.0.0
