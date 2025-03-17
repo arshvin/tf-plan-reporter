@@ -24,3 +24,7 @@ jobs:
     - name: Run common linters
       run: |
         pre-commit run -a || { git status; echo "Validation failed"; exit 1; }
+
+    - name: Run App tests
+      run: |
+        go test ./...
