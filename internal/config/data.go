@@ -11,8 +11,7 @@ type ConfigFile struct {
 
 type DefensePlan struct {
 	IsAllCriticalSpecified bool
-	RescueList             map[string]bool
-	IgnoreList             map[string]bool
+	ExceptionalResources             map[string]bool //Depending on value IsAllCriticalSpecified this list (actually map) is `allowed for removal` (if true), or `critical for keeping` (if false)
 }
 
 type AppConfig struct {
@@ -24,8 +23,7 @@ type AppConfig struct {
 
 func create() *AppConfig {
 	appCfg := new(AppConfig)
-	appCfg.RescueList = make(map[string]bool)
-	appCfg.IgnoreList = make(map[string]bool)
+	appCfg.ExceptionalResources = make(map[string]bool)
 
 	return appCfg
 }

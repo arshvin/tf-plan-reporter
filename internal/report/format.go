@@ -195,7 +195,7 @@ func formatMainContent(tableStyle *simpletable.Style, items []*processing.Resour
 		}
 
 		if deleteTableAnswers != nil {
-			answer := deleteTableAnswers[decisionMaker.IsAllowed(item.Type)]
+			answer := deleteTableAnswers[decisionMaker.IsAllowedForRemoval(item.Type)]
 			logger.WithField("resource_type", item.Type).Debugf("Is it OK to remove: %s", answer)
 
 			row = slices.Insert(row, 0,

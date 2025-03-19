@@ -32,12 +32,12 @@ func Parse(name string) *AppConfig {
 	}); i > -1 {
 		appConfig.IsAllCriticalSpecified = true
 		for _, item := range appConfig.AllowedRemovals {
-			appConfig.IgnoreList[strings.ToLower(item)] = true
+			appConfig.ExceptionalResources[strings.ToLower(item)] = true //here it plays role of `allowed for removals` resources
 		}
 	} else {
 		appConfig.IsAllCriticalSpecified = false
 		for _, item := range appConfig.CriticalResources {
-			appConfig.RescueList[strings.ToLower(item)] = true
+			appConfig.ExceptionalResources[strings.ToLower(item)] = true //here it plays role of `critical for keeping` resources
 		}
 	}
 

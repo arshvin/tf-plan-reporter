@@ -56,6 +56,7 @@ terraform_plan_search_folder: ./
 	assert.Equal(ts.T(), []string(nil), parsedConfig.AllowedRemovals)              //nolint:typecheck
 	assert.Equal(ts.T(), []string(nil), parsedConfig.CriticalResources)            //nolint:typecheck
 	assert.Equal(ts.T(), false, parsedConfig.NotUseTfChDirArg)                     //nolint:typecheck
+	assert.Equal(ts.T(), 0, len(parsedConfig.ExceptionalResources))                //nolint:typecheck
 
 }
 
@@ -75,6 +76,7 @@ func (ts *ConfigParserTestSuite) TestParsingEmptyFile() {
 	assert.Equal(ts.T(), []string(nil), parsedConfig.AllowedRemovals)   //nolint:typecheck
 	assert.Equal(ts.T(), []string(nil), parsedConfig.CriticalResources) //nolint:typecheck
 	assert.Equal(ts.T(), false, parsedConfig.NotUseTfChDirArg)          //nolint:typecheck
+	assert.Equal(ts.T(), 0, len(parsedConfig.ExceptionalResources))     //nolint:typecheck
 
 }
 
@@ -108,6 +110,7 @@ allowed_removals:  # makes sense only if "all" specified in "critical_resources"
 	assert.Equal(ts.T(), []string{"resource_type1", "resource_type2", "resource_type3"}, parsedConfig.AllowedRemovals) //nolint:typecheck
 	assert.Equal(ts.T(), []string{"all"}, parsedConfig.CriticalResources)                                              //nolint:typecheck
 	assert.Equal(ts.T(), true, parsedConfig.NotUseTfChDirArg)                                                          //nolint:typecheck
+	assert.Equal(ts.T(), 3, len(parsedConfig.ExceptionalResources))                                                    //nolint:typecheck
 
 }
 
