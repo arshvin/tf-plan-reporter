@@ -11,23 +11,23 @@ import (
 
 // PrintReport function prepares and print the report from the data collected by function RunSearch
 func PrintReport(reportData *processing.ConsolidatedJson, outputFilename string) {
-	var output io.Writer
-	var reports []*report
 
 	totalAmount := reportData.TotalItems()
 	log.WithField("total_amount", totalAmount).Debug("Report table contains elements")
 
 	if totalAmount > 0 {
+		var reports []*report
 
 		if len(outputFilename) > 0 {
-			var err error
-			if output, err = os.Create(outputFilename); err != nil {
+			output, err := os.Create(outputFilename)
+
+			if err != nil {
 				log.Fatal(err)
 			}
 
 			log.WithField("file_name", outputFilename).Debug("The empty report file has been created")
 
-			defer (output.(io.Closer)).Close()
+			defer output.Close()
 
 			reports = []*report{
 				forGitHub(output),
@@ -48,6 +48,6 @@ func PrintReport(reportData *processing.ConsolidatedJson, outputFilename string)
 		}
 
 	} else {
-		fmt.Fprint(output, "THERE IS NO ANY REPORT DATA")
+		fmt.Print("THERE IS NO ANY REPORT DATA")
 	}
 }
