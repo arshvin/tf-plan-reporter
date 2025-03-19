@@ -24,7 +24,8 @@ var (
 	configFileName         string
 	outputFileName         string
 	onlyPrintConfigExample bool
-	exitWithError          bool
+	failIfCriticalRemovals          bool
+	failIfNoTfPlanFound          bool
 	debugOutput            bool
 	noColor                bool
 )
@@ -35,7 +36,8 @@ func Execute() {
 	flag.StringVar(&configFileName, configFileArg, "", "Config file name of the App")
 	flag.StringVar(&outputFileName, "report-file", "", "Output file name of the report ")
 	flag.BoolVar(&onlyPrintConfigExample, printConfigExampleArg, false, "Print an example of the App config file without analyses run")
-	flag.BoolVar(&exitWithError, "keep-gate", false, "Finish App with non zero exit code if critical resources removals are detected")
+	flag.BoolVar(&failIfCriticalRemovals, "keep-gate", false, "Exit with non-zero code if critical resources removals found")
+	flag.BoolVar(&failIfNoTfPlanFound, "zero-plan-fail", false, "Exit with non-zero code if TF plan file not found")
 
 	flag.BoolVar(&debugOutput, "verbose", false, "Add debug logging output")
 	flag.BoolVar(&noColor, "no-color", false, "Turn off color output in log messages")
@@ -77,13 +79,15 @@ func Execute() {
 		}
 
 		settings.ReportFileName = outputFileName
-		settings.FailIfCriticalRemovals = exitWithError
+		settings.FailIfCriticalRemovals = failIfCriticalRemovals
+		settings.FailIfNoTfPlanFound = failIfNoTfPlanFound
 
 		collectedData := processing.CollectBinaryData(
 			settings.SearchFolder,
 			settings.TfPlanFileBasename,
 			settings.TfCmdBinaryFile,
 			settings.NotUseTfChDirArg,
+			settings.FailIfNoTfPlanFound,
 		)
 
 		dm:=processing.GetDecisionMaker()

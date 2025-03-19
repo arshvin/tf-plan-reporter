@@ -15,13 +15,13 @@ func Parse(name string) *AppConfig {
 	viper_runtime.SetConfigFile(name)
 
 	if err := viper_runtime.ReadInConfig(); err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 
 	appConfig := create()
 	var configFile ConfigFile
 	if err := viper_runtime.Unmarshal(&configFile); err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 
 	log.Debugf("Content of config file/structure: %v", configFile)
