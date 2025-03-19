@@ -2,7 +2,6 @@ package report
 
 import (
 	"fmt"
-	"io"
 	"os"
 
 	"github.com/arshvin/tf-plan-reporter/internal/processing"
