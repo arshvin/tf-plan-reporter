@@ -38,11 +38,14 @@ func CollectBinaryData(searchFolder string, planBaseFileName string, cmdFullPath
 	reportData := new(ConsolidatedJson)
 
 	if foundItems > 0 {
-		log.Debug("Checking if Terraform providers folder exists near with TF plan files in advance")
 
-		for _, absTFPlanFilePath := range foundPlanFiles {
-			if !TfProviderFolderExist(absTFPlanFilePath) {
-				log.Fatalf("Terraform providers folder (.terraform/providers) was not found inside of: %s", absTFPlanFilePath)
+		if notChDir == false {
+			log.Debug("Checking if Terraform providers folder exists near with TF plan files in advance, 'not_use_chdir': false")
+
+			for _, absTFPlanFilePath := range foundPlanFiles {
+				if !TfProviderFolderExist(absTFPlanFilePath) {
+					log.Fatalf("Terraform providers folder (.terraform/providers) was not found inside of: %s ,'not_use_chdir': false", absTFPlanFilePath)
+				}
 			}
 		}
 

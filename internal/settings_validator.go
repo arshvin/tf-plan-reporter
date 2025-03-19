@@ -81,7 +81,7 @@ func Validate(settings *config.AppConfig) error {
 		checkIfPathExists(settings.SearchFolder, false),
 		func() error { 	//Similar checking, if settings.NotUseTfChDirArg == false, will be further once all tf-plan files found
 			if settings.NotUseTfChDirArg {
-				log.Debug("Checking if Terraform providers folder exists in current folder in advance")
+				log.Debug("Checking if Terraform providers folder exists in current folder in advance, 'not_use_chdir': true")
 
 				if !processing.TfProviderFolderExist(cwd) {
 					return errors.New(errMessageTfProviderFolderAbsent)
