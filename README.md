@@ -87,4 +87,9 @@ allowed_removals:                             # Makes sense only if "all" item i
   - azurerm_role_assignment
   - azurerm_monitor_diagnostic_setting
   - azurerm_key_vault
+
+# Whether or not the arg '-chdir=DIR' of 'terraform' command is going be used for processing of TF binary file. OPTIONAL parameter
+# In short, if you're using terraform+terragrant bunch for cloud provisioning this parameter should be 'false'.
+# If you're using terraform only, it needs to be set up to 'true'
+not_use_chdir: false
 ```

@@ -2,22 +2,16 @@ package processing
 
 import (
 	"fmt"
-	"io"
+	"io/fs"
 	"os"
+	"os/exec"
 	"path"
+	"path/filepath"
 	"runtime"
-
-	log "github.com/sirupsen/logrus"
-
-	cmn "github.com/arshvin/tf-plan-reporter/internal"
-	cfg "github.com/arshvin/tf-plan-reporter/internal/config"
-	"github.com/arshvin/tf-plan-reporter/internal/report"
+	"strings"
 
 	tfJson "github.com/hashicorp/terraform-json"
-)
-
-var (
-	reportTable *cmn.ConsolidatedJson = new(cmn.ConsolidatedJson)
+	log "github.com/sirupsen/logrus"
 )
 
 type processingRequest struct {
@@ -25,42 +19,50 @@ type processingRequest struct {
 	planPath    string
 	parsedData  chan<- tfJson.Plan
 	pool        chan int
+	notChDir    bool
 }
 
-// RunSearch function does:
+// CollectBinaryData function does:
 // 1. searches all terraform generated binary plan files, with basename specified in `terraform_plan_file_basename`,
 // starting from root director specified in `terraform_plan_search_folder` config file parameter
-// 2. fills of `reportTable` variable, by parsed terraform plan data, which further is going to be source of printed report
-func RunSearch() {
-	config := cfg.AppConfig
-	tfPlanFilesPathList := findAllTFPlanFiles(config.SearchFolder, config.PlanFileBasename)
+// 2. fills of `reportData` variable, by parsed terraform plan data, which further is going to be source of printed report
+// TODO: Implement test of this function to make sure that it works as expected
+func CollectBinaryData(searchFolder string, planBaseFileName string, cmdFullPathName string, notChDir bool, zeroFoundFail bool) *ConsolidatedJson {
+	foundPlanFiles := findAllTFPlanFiles(searchFolder, planBaseFileName)
 
-	foundItems := len(tfPlanFilesPathList)
+	foundItems := len(foundPlanFiles)
 	log.WithFields(log.Fields{
-		"plan_basename": config.PlanFileBasename,
+		"plan_basename": planBaseFileName,
 		"total_amount":  foundItems,
 	}).Debug("Found terraform generated plan files")
 
+	reportData := new(ConsolidatedJson)
+
 	if foundItems > 0 {
+
+		if notChDir == false {
+			log.Debug("Checking if Terraform providers folder exists near with TF plan files in advance, 'not_use_chdir': false")
+
+			for _, absTFPlanFilePath := range foundPlanFiles {
+				if !TfProviderFolderExist(absTFPlanFilePath) {
+					log.Fatalf("Terraform providers folder (.terraform/providers) was not found inside of: %s ,'not_use_chdir': false", absTFPlanFilePath)
+				}
+			}
+		}
 
 		pool := make(chan int, runtime.GOMAXPROCS(0))
 		dataPipe := make(chan tfJson.Plan, runtime.GOMAXPROCS(0))
 
-		absCmdBinaryPath := config.BinaryFile
-		if !path.IsAbs(config.BinaryFile) {
-			cwd, _ := os.Getwd()
-			absCmdBinaryPath = path.Join(cwd, config.BinaryFile)
-		}
-
-		for _, absTFPlanFilePath := range tfPlanFilesPathList {
+		for _, absTFPlanFilePath := range foundPlanFiles {
 			pr := &processingRequest{
-				commandName: absCmdBinaryPath,
+				commandName: cmdFullPathName,
 				planPath:    absTFPlanFilePath,
 				parsedData:  dataPipe,
 				pool:        pool,
+				notChDir:    notChDir,
 			}
 
-			go tfPlanReader(pr)
+			go tfPlanReader(pr) //Async TF plan reader
 		}
 
 		//Parsing of read data
@@ -68,55 +70,99 @@ func RunSearch() {
 		for item := 0; item < foundItems; item++ {
 			tfPlan := <-dataPipe
 
-			reportTable.Parse(&tfPlan)
+			reportData.Parse(&tfPlan)
+		}
+	} else {
+		if zeroFoundFail {
+			log.Fatal("Could not find TF-plan file, while 'zero-plan-fail' cli arg specified")
 		}
 	}
+
+	return reportData
 }
 
-// PrintReport function prepares and print the report from the data collected by function RunSearch
-func PrintReport() {
-	filename := cfg.AppConfig.ReportFileName
-	var output io.Writer
-	var reports []*report.Report
+// TODO: Implement test of this function to make sure that it works as expected
+func findAllTFPlanFiles(searchFolder string, fileBasename string) []string {
+	var result []string
 
-	totalAmount := reportTable.TotalItems()
-	log.WithField("total_amount", totalAmount).Debug("Report table contains elements")
+	if err := filepath.WalkDir(searchFolder, func(currentPath string, d fs.DirEntry, err error) error {
 
-	if totalAmount > 0 {
+		if d.Type().IsRegular() {
+			pathElements := strings.Split(currentPath, string(os.PathSeparator))
 
-		if len(filename) > 0 {
-			var err error
-			if output, err = os.Create(filename); err != nil {
-				log.Fatal(err)
+			if pathElements[len(pathElements)-1] == fileBasename {
+				log.Debugf("Found TF plan file: %s", currentPath)
+
+				result = append(result, currentPath)
 			}
-
-			log.WithField("file_name", filename).Debug("The empty report file has been created")
-
-			defer (output.(io.Closer)).Close()
-
-			reports = []*report.Report{
-				report.ForGitHub(output),
-				report.ForStdout(),
-			}
-
-		} else {
-			reports = []*report.Report{
-				report.ForStdout(),
-			}
-
-			log.Debug("The report is going to be printed to Stdout")
 		}
 
-		for _, r := range reports {
-			r.Prepare(reportTable)
-			r.Print()
-		}
-
-		if cfg.AppConfig.FailIfCriticalRemovals && cfg.AppConfig.CriticalRemovalsFound {
-			log.Fatal("There are critical resources removal in the report")
-		}
-
-	} else {
-		fmt.Fprint(output, "THERE IS NO ANY REPORT DATA")
+		return nil
+	}); err != nil {
+		log.Fatalf("During directory tree walking the error happened: %s", err)
 	}
+
+	return result
+}
+
+func tfPlanReader(pr *processingRequest) {
+	planFileContext := log.WithField("plan_file_name", pr.planPath)
+	planFileContext.Info("Preparation for parsing")
+
+	planFileContext.Debug("Waiting of green light in process pool")
+	pr.pool <- 1
+	planFileContext.Debug("Green light has been acquired")
+
+	cmdResolvedPath, err := exec.LookPath(pr.commandName)
+	if err != nil {
+		planFileContext.Fatalf("Could not find the command file: %s", pr.commandName)
+	}
+
+	var auxCmdArgs string
+	if pr.notChDir {
+		// This branch assumes that there is only 1 TF-plan file should be, terragrunt tool is not used, and
+		// .terraform/providers folder is in current working directory
+		auxCmdArgs = fmt.Sprintf("show -json -no-color %s", pr.planPath)
+	} else {
+		// This branch assumes that there are few TF-plan files, generated by terragrunt/terraform bunch tools
+		// and .terraform/providers folderS are next to those TF-plan files. Therefore to make terraform tool
+		// be able to read and parse a TF-plan file, we need to specify that it needs to change its cwd to the
+		// folder where particular TF-plan file is located
+		planDirName := path.Dir(pr.planPath)
+		auxCmdArgs = fmt.Sprintf("-chdir=%s show -json -no-color %s", planDirName, path.Base(pr.planPath))
+	}
+
+	cmdContext := planFileContext.WithFields(log.Fields{
+		"command":        cmdResolvedPath,
+		"args":           auxCmdArgs,
+		"plan_file_name": path.Base(pr.planPath),
+	})
+	cmdContext.Debug("Command launching")
+
+	cmd := exec.Command(cmdResolvedPath, strings.Split(auxCmdArgs, " ")...)
+	var outputPlan strings.Builder
+	var tfErr strings.Builder
+
+	cmd.Stdout = &outputPlan
+	cmd.Stderr = &tfErr
+
+	err = cmd.Run()
+	if err != nil {
+		cmdContext.Debugf("Command stderr output:\n%s", tfErr.String())
+		cmdContext.Fatalf("During execution the error happened: %s", err)
+	}
+
+	var tfJsonPlan tfJson.Plan
+	err = tfJsonPlan.UnmarshalJSON([]byte(outputPlan.String()))
+	if err != nil {
+		planFileContext.Fatalf("Could not unmarshal: %s", err)
+	}
+
+	planFileContext.Debugf("Harvested records: %v", len(tfJsonPlan.ResourceChanges))
+
+	pr.parsedData <- tfJsonPlan
+
+	planFileContext.Print("Parsing finished")
+	//Return back capacity to the pool
+	<-pr.pool
 }

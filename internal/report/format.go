@@ -12,8 +12,8 @@ import (
 	"text/template"
 
 	"github.com/alexeyco/simpletable"
-	exch "github.com/arshvin/tf-plan-reporter/internal"
-	cfg "github.com/arshvin/tf-plan-reporter/internal/config"
+
+	"github.com/arshvin/tf-plan-reporter/internal/processing"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -35,7 +35,7 @@ type reportData struct {
 	ActionType   byte
 }
 
-type Report struct {
+type report struct {
 	template   string
 	output     io.Writer
 	data       []*reportData
@@ -43,8 +43,8 @@ type Report struct {
 	tableStyle *simpletable.Style
 }
 
-func ForGitHub(output io.Writer) *Report {
-	return &Report{
+func forGitHub(output io.Writer) *report {
+	return &report{
 		output:   output,
 		template: "templates/github_markdown.tmpl",
 		answers: map[bool]string{
@@ -55,8 +55,8 @@ func ForGitHub(output io.Writer) *Report {
 	}
 }
 
-func ForStdout() *Report {
-	return &Report{
+func forStdout() *report {
+	return &report{
 		output:   os.Stdout,
 		template: "templates/stdout.tmpl",
 		answers: map[bool]string{
@@ -67,14 +67,14 @@ func ForStdout() *Report {
 	}
 }
 
-func (r *Report) Prepare(data *exch.ConsolidatedJson) {
+func (r *report) Prepare(data *processing.ConsolidatedJson) {
 
 	queue := []byte{deleted, created, updated, unchanged}
 
 	var answers map[bool]string
 
 	for _, actionType := range queue {
-		var value []*exch.ResourceData
+		var value []*processing.ResourceData
 
 		switch actionType {
 		case deleted:
@@ -115,7 +115,7 @@ func (r *Report) Prepare(data *exch.ConsolidatedJson) {
 	}
 }
 
-func (r *Report) Print() {
+func (r *report) Print() {
 
 	funcMap := template.FuncMap{
 		"upper": strings.ToUpper,
@@ -150,14 +150,15 @@ func (r *Report) Print() {
 			log.Fatal(err)
 		}
 	}
-
 }
 
-func (r *Report) getTemplate(name string) string {
+func (r *report) getTemplate(name string) string {
+
 	return fmt.Sprintf("%s/%s", strings.Split(r.template, ".")[0], name)
+
 }
 
-func formatMainContent(tableStyle *simpletable.Style, items []*exch.ResourceData, deleteTableAnswers map[bool]string, logger *log.Entry) *simpletable.Table {
+func formatMainContent(tableStyle *simpletable.Style, items []*processing.ResourceData, deleteTableAnswers map[bool]string, logger *log.Entry) *simpletable.Table {
 	headers := []string{"Type", "Name", "Index (if any)"}
 
 	if deleteTableAnswers != nil {
@@ -179,9 +180,11 @@ func formatMainContent(tableStyle *simpletable.Style, items []*exch.ResourceData
 	}
 
 	logger.Debug("Sorting elements data elements before table report filling")
-	slices.SortFunc(items, func(a, b *exch.ResourceData) int {
+	slices.SortFunc(items, func(a, b *processing.ResourceData) int {
 		return cmp.Compare(a.Type, b.Type)
 	})
+
+	decisionMaker := processing.GetDecisionMaker()
 
 	logger.Debug("Filling of report table rows")
 	for _, item := range items {
@@ -192,7 +195,7 @@ func formatMainContent(tableStyle *simpletable.Style, items []*exch.ResourceData
 		}
 
 		if deleteTableAnswers != nil {
-			answer := isAllowedToRemove(item.Type, deleteTableAnswers)
+			answer := deleteTableAnswers[decisionMaker.IsAllowedForRemoval(item.Type)]
 			logger.WithField("resource_type", item.Type).Debugf("Is it OK to remove: %s", answer)
 
 			row = slices.Insert(row, 0,
@@ -203,20 +206,4 @@ func formatMainContent(tableStyle *simpletable.Style, items []*exch.ResourceData
 	}
 
 	return table
-}
-
-func isAllowedToRemove(resourceType string, deleteTableAnswers map[bool]string) string {
-	if cfg.AppConfig.IsAllCriticalSpecified {
-		if _, ok := cfg.AppConfig.IgnoreList[resourceType]; ok {
-			return deleteTableAnswers[true]
-		}
-		cfg.AppConfig.CriticalRemovalsFound = true
-		return deleteTableAnswers[false]
-	} else {
-		if _, ok := cfg.AppConfig.RescueList[resourceType]; ok {
-			cfg.AppConfig.CriticalRemovalsFound = true
-			return deleteTableAnswers[false]
-		}
-		return deleteTableAnswers[true]
-	}
 }

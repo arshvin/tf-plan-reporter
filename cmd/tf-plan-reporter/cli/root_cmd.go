@@ -6,8 +6,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	cfg "github.com/arshvin/tf-plan-reporter/internal/config"
-	analysis "github.com/arshvin/tf-plan-reporter/internal/processing"
+	"github.com/arshvin/tf-plan-reporter/internal"
+	"github.com/arshvin/tf-plan-reporter/internal/config"
+	"github.com/arshvin/tf-plan-reporter/internal/processing"
+	"github.com/arshvin/tf-plan-reporter/internal/report"
 
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -18,23 +20,35 @@ const (
 	printConfigExampleArg = "print-example"
 )
 
+var (
+	configFileName         string
+	outputFileName         string
+	onlyPrintConfigExample bool
+	failIfCriticalRemovals          bool
+	failIfNoTfPlanFound          bool
+	debugOutput            bool
+	noColor                bool
+)
+
+// Entry point of tf-plan-reporter tool
 func Execute() {
-	var configFileName string
-	var outputFileName string
-	var onlyPrintConfigExample bool
-	var exitWithError bool
-	var debugOutput bool
-	var noColor bool
 
 	flag.StringVar(&configFileName, configFileArg, "", "Config file name of the App")
 	flag.StringVar(&outputFileName, "report-file", "", "Output file name of the report ")
 	flag.BoolVar(&onlyPrintConfigExample, printConfigExampleArg, false, "Print an example of the App config file without analyses run")
-	flag.BoolVar(&exitWithError, "keep-gate", false, "Finish App with non zero exit code if critical resources removals are detected")
+	flag.BoolVar(&failIfCriticalRemovals, "keep-gate", false, "Exit with non-zero code if critical resources removals found")
+	flag.BoolVar(&failIfNoTfPlanFound, "zero-plan-fail", false, "Exit with non-zero code if TF plan file not found")
 
 	flag.BoolVar(&debugOutput, "verbose", false, "Add debug logging output")
 	flag.BoolVar(&noColor, "no-color", false, "Turn off color output in log messages")
 
+	flag.Bool("help", false, "help message output")
+	flag.Bool("h", false, "help message output")
+
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+	pflag.CommandLine.MarkHidden("help")
+	pflag.CommandLine.MarkHidden("h")
+
 	pflag.Parse()
 	viper.BindPFlags(pflag.CommandLine)
 
@@ -48,23 +62,46 @@ func Execute() {
 		})
 	}
 
-	if len(configFileName) > 0 {
-		cfg.ProcessFileConfig(configFileName)
-
-		cfg.AppConfig.ReportFileName = outputFileName
-		cfg.AppConfig.FailIfCriticalRemovals = exitWithError
-
-		analysis.RunSearch()
-		analysis.PrintReport()
-
+	if ok, _ := pflag.CommandLine.GetBool("help"); ok {
+		pflag.Usage()
 		os.Exit(0) //Explicitly
 	}
 
 	if onlyPrintConfigExample {
-		cfg.PrintExample()
+		config.PrintExample()
+		os.Exit(0) //Explicitly
+	}
+
+	if len(configFileName) > 0 {
+		settings := config.Parse(configFileName)
+		if err:= internal.Validate(settings); err != nil{
+			log.Fatal(err)
+		}
+
+		settings.ReportFileName = outputFileName
+		settings.FailIfCriticalRemovals = failIfCriticalRemovals
+		settings.FailIfNoTfPlanFound = failIfNoTfPlanFound
+
+		collectedData := processing.CollectBinaryData(
+			settings.SearchFolder,
+			settings.TfPlanFileBasename,
+			settings.TfCmdBinaryFile,
+			settings.NotUseTfChDirArg,
+			settings.FailIfNoTfPlanFound,
+		)
+
+		dm:=processing.GetDecisionMaker()
+		dm.SetConfig(settings)
+
+		report.PrintReport(collectedData,settings.ReportFileName)
+
+		if settings.FailIfCriticalRemovals && dm.CriticalRemovalsFound() {
+			log.Fatal("There are critical resources removal in the report, while 'keep-gate' cli arg specified")
+		}
+
 		os.Exit(0) //Explicitly
 	}
 
 	pflag.Usage()
-	log.Fatalf("It must be chosen one of the following flags: %s, %s", configFileArg, printConfigExampleArg)
+	log.Fatalf("At least one of the following flags must be chosen: %s, %s", configFileArg, printConfigExampleArg)
 }
