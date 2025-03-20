@@ -73,7 +73,7 @@ func CollectBinaryData(searchFolder string, planBaseFileName string, cmdFullPath
 		}
 	} else {
 		if zeroFoundFail {
-			log.Fatal("Could not find TF-plan file, and 'zero-plan-fail' cli arg specified")
+			log.Fatal("Could not find TF-plan file, while 'zero-plan-fail' cli arg specified")
 		}
 	}
 

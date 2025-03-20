@@ -96,7 +96,7 @@ func Execute() {
 		report.PrintReport(collectedData,settings.ReportFileName)
 
 		if settings.FailIfCriticalRemovals && dm.CriticalRemovalsFound() {
-			log.Fatal("There are critical resources removal in the report")
+			log.Fatal("There are critical resources removal in the report, while 'keep-gate' cli arg specified")
 		}
 
 		os.Exit(0) //Explicitly
