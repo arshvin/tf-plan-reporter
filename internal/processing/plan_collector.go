@@ -26,6 +26,7 @@ type processingRequest struct {
 // 1. searches all terraform generated binary plan files, with basename specified in `terraform_plan_file_basename`,
 // starting from root director specified in `terraform_plan_search_folder` config file parameter
 // 2. fills of `reportData` variable, by parsed terraform plan data, which further is going to be source of printed report
+// TODO: Implement test of this function to make sure that it works as expected
 func CollectBinaryData(searchFolder string, planBaseFileName string, cmdFullPathName string, notChDir bool, zeroFoundFail bool) *ConsolidatedJson {
 	foundPlanFiles := findAllTFPlanFiles(searchFolder, planBaseFileName)
 
